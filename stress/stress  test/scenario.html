@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 沉浸式情景体验主页面</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+        
+        :root {
+            --primary-color: #8a7bff;
+            --secondary-color: #b3a7ff;
+            --background-color: #f8f9fa;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --border-radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: var(--background-color);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        
+        .status-bar {
+            height: 44px;
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .status-bar .time {
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .status-bar .icons {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .header {
+            height: 44px;
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .header .back {
+            font-size: 20px;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+        
+        .header .title {
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        
+        .header .progress {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .progress-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #e0e0e0;
+        }
+        
+        .progress-dot.active {
+            background-color: var(--primary-color);
+        }
+        
+        .content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        .scenario-image {
+            width: 100%;
+            height: 200px;
+            border-radius: var(--border-radius);
+            background-image: url('https://images.unsplash.com/photo-1503676260728-1c00da094a0b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80');
+            background-size: cover;
+            background-position: center;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+        }
+        
+        .scenario-text {
+            background-color: white;
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+        }
+        
+        .scenario-text p {
+            font-size: 16px;
+            color: var(--text-primary);
+            line-height: 1.6;
+            margin: 0;
+        }
+        
+        .audio-controls {
+            background-color: white;
+            border-radius: var(--border-radius);
+            padding: 16px;
+            margin-bottom: 32px;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .audio-info {
+            flex: 1;
+            margin-left: 16px;
+        }
+        
+        .audio-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+        
+        .audio-progress {
+            width: 100%;
+            height: 4px;
+            background-color: #e0e0e0;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        
+        .audio-progress-bar {
+            width: 30%;
+            height: 100%;
+            background-color: var(--primary-color);
+        }
+        
+        .audio-buttons {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .audio-button {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .audio-button:hover {
+            background-color: #7a6bff;
+            transform: scale(1.1);
+        }
+        
+        .interaction-area {
+            background-color: white;
+            border-radius: var(--border-radius);
+            padding: 24px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+        }
+        
+        .interaction-title {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        
+        .interaction-options {
+            display: flex;
+            gap: 16px;
+        }
+        
+        .option {
+            flex: 1;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            border: 2px solid #e0e0e0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        
+        .option:hover {
+            border-color: var(--primary-color);
+            background-color: rgba(138, 123, 255, 0.05);
+        }
+        
+        .option.active {
+            border-color: var(--primary-color);
+            background-color: rgba(138, 123, 255, 0.1);
+        }
+        
+        .option-text {
+            font-size: 14px;
+            color: var(--text-primary);
+            line-height: 1.4;
+        }
+        
+        .hint {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-align: center;
+            margin-top: 16px;
+        }
+        
+        .next-button {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .next-button:hover {
+            background-color: #7a6bff;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+        
+        .next-button:disabled {
+            background-color: #e0e0e0;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(138, 123, 255, 0.4);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(138, 123, 255, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(138, 123, 255, 0);
+            }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <!-- 状态栏 -->
+    <div class="status-bar">
+        <div class="time">9:41</div>
+        <div class="icons">
+            <i class="fa fa-signal"></i>
+            <i class="fa fa-wifi"></i>
+            <i class="fa fa-battery-full"></i>
+        </div>
+    </div>
+    
+    <!-- 顶部导航栏 -->
+    <div class="header">
+        <div class="back" onclick="goBack()"><i class="fa fa-arrow-left"></i></div>
+        <div class="title">课堂发言压力场景</div>
+        <div class="progress">
+            <div class="progress-dot active"></div>
+            <div class="progress-dot"></div>
+            <div class="progress-dot"></div>
+        </div>
+    </div>
+    
+    <!-- 中部核心情景展示区 -->
+    <div class="content">
+        <div class="scenario-image"></div>
+        
+        <div class="scenario-text">
+            <p>上课铃声响起，老师走进教室。你坐在教室中间的位置，正在认真听讲。突然，老师停下来，环视了一下教室，然后点到了你的名字："请你来回答这个问题。"</p>
+            <p class="mt-4">你感到心跳加速，手心开始出汗。老师期待地看着你，同学们的目光也都集中在你身上。</p>
+        </div>
+        
+        <div class="audio-controls">
+            <div class="audio-button">
+                <i class="fa fa-play"></i>
+            </div>
+            <div class="audio-info">
+                <div class="audio-title">场景音频</div>
+                <div class="audio-progress">
+                    <div class="audio-progress-bar"></div>
+                </div>
+            </div>
+            <div class="audio-buttons">
+                <div class="audio-button" style="background-color: #f0f0f0; color: var(--text-secondary);">
+                    <i class="fa fa-step-backward"></i>
+                </div>
+                <div class="audio-button" style="background-color: #f0f0f0; color: var(--text-secondary);">
+                    <i class="fa fa-step-forward"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="interaction-area">
+            <div class="interaction-title">滑动选择你的真实反应</div>
+            <div class="interaction-options">
+                <div class="option" onclick="selectOption('a')">
+                    <div class="option-text">紧张地站起来，结结巴巴地回答问题</div>
+                </div>
+                <div class="option" onclick="selectOption('b')">
+                    <div class="option-text">深吸一口气，冷静地回答问题</div>
+                </div>
+            </div>
+            <div class="hint">左滑选择倾向 A，右滑选择倾向 B</div>
+        </div>
+        
+        <button class="next-button" id="nextButton" disabled onclick="nextStep()">下一个场景</button>
+    </div>
+    
+    <script>
+        let selectedOption = null;
+        
+        function goBack() {
+            window.location.href = 'home.html';
+        }
+        
+        function selectOption(option) {
+            selectedOption = option;
+            
+            // 移除所有选项的 active 类
+            document.querySelectorAll('.option').forEach(el => el.classList.remove('active'));
+            
+            // 添加当前选项的 active 类
+            document.querySelectorAll('.option')[option === 'a' ? 0 : 1].classList.add('active');
+            
+            // 启用下一步按钮
+            document.getElementById('nextButton').disabled = false;
+        }
+        
+        function nextStep() {
+            // 模拟场景切换
+            // 实际应用中，这里会根据用户选择生成后续剧情
+            
+            // 当所有场景完成后，跳转到评估页面
+            window.location.href = 'assessment.html';
+        }
+        
+        // 模拟音频播放
+        document.querySelector('.audio-button').addEventListener('click', function() {
+            const icon = this.querySelector('i');
+            if (icon.classList.contains('fa-play')) {
+                icon.classList.remove('fa-play');
+                icon.classList.add('fa-pause');
+            } else {
+                icon.classList.remove('fa-pause');
+                icon.classList.add('fa-play');
+            }
+        });
+    </script>
+</body>
+</html>

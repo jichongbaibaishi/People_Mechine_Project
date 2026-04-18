@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 情景化学生压力微评估 App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+        
+        :root {
+            --primary-color: #8a7bff;
+            --secondary-color: #b3a7ff;
+            --background-color: #f8f9fa;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --border-radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: #e0e0e0;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            gap: 20px;
+            padding: 20px;
+        }
+        
+        .phone-frame {
+            width: 375px;
+            height: 812px;
+            background-color: white;
+            border-radius: 40px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            position: relative;
+            margin: 20px;
+        }
+        
+        .status-bar {
+            height: 44px;
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            border-bottom: 1px solid #e0e0e0;
+            position: relative;
+            z-index: 100;
+        }
+        
+        .status-bar .time {
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .status-bar .icons {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .app-content {
+            height: calc(100% - 44px);
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        .tab-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 83px;
+            background-color: white;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 100;
+        }
+        
+        .tab-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: #999999;
+        }
+        
+        .tab-item.active {
+            color: var(--primary-color);
+        }
+        
+        .tab-item i {
+            font-size: 20px;
+        }
+        
+        .tab-item span {
+            font-size: 10px;
+        }
+        
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        .page-title {
+            text-align: center;
+            margin-top: 20px;
+            font-weight: 500;
+            color: #333333;
+        }
+    </style>
+</head>
+<body>
+    <!-- 开屏启动页 -->
+    <div class="phone-frame">
+        <div class="page-title">开屏启动页</div>
+        <iframe src="splash.html"></iframe>
+    </div>
+    
+    <!-- 登录注册 & 匿名隐私选择页 -->
+    <div class="phone-frame">
+        <div class="page-title">登录注册 & 匿名隐私选择页</div>
+        <iframe src="login.html"></iframe>
+    </div>
+    
+    <!-- App 首页・场景测试主页 -->
+    <div class="phone-frame">
+        <div class="page-title">App 首页・场景测试主页</div>
+        <iframe src="home.html"></iframe>
+    </div>
+    
+    <!-- AI 沉浸式情景体验主页面 -->
+    <div class="phone-frame">
+        <div class="page-title">AI 沉浸式情景体验主页面</div>
+        <iframe src="scenario.html"></iframe>
+    </div>
+    
+    <!-- 场景内嵌微评估答题页 -->
+    <div class="phone-frame">
+        <div class="page-title">场景内嵌微评估答题页</div>
+        <iframe src="assessment.html"></iframe>
+    </div>
+    
+    <!-- 保存结果确认弹窗 -->
+    <div class="phone-frame">
+        <div class="page-title">保存结果确认弹窗</div>
+        <iframe src="save-modal.html"></iframe>
+    </div>
+    
+    <!-- AI 压力状态结果反馈详情页 -->
+    <div class="phone-frame">
+        <div class="page-title">AI 压力状态结果反馈详情页</div>
+        <iframe src="result.html"></iframe>
+    </div>
+    
+    <!-- 历史记录 & 压力趋势对比页 -->
+    <div class="phone-frame">
+        <div class="page-title">历史记录 & 压力趋势对比页</div>
+        <iframe src="history.html"></iframe>
+    </div>
+    
+    <!-- AI 深度情绪对话页 -->
+    <div class="phone-frame">
+        <div class="page-title">AI 深度情绪对话页</div>
+        <iframe src="chat.html"></iframe>
+    </div>
+    
+    <!-- 个人中心 & 隐私设置页 -->
+    <div class="phone-frame">
+        <div class="page-title">个人中心 & 隐私设置页</div>
+        <iframe src="profile.html"></iframe>
+    </div>
+</body>
+</html>

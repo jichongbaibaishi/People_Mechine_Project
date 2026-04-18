@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>历史记录 & 压力趋势对比页</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+        
+        :root {
+            --primary-color: #8a7bff;
+            --secondary-color: #b3a7ff;
+            --background-color: #f8f9fa;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --border-radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: var(--background-color);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+        
+        .status-bar {
+            height: 44px;
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .status-bar .time {
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .status-bar .icons {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .header {
+            height: 44px;
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .header .back {
+            font-size: 20px;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+        
+        .header .title {
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        
+        .content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .chart-section {
+            background-color: white;
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow);
+        }
+        
+        .chart-section h2 {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 20px;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 250px;
+        }
+        
+        .records-section {
+            background-color: white;
+            border-radius: var(--border-radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+        }
+        
+        .records-section h2 {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+        }
+        
+        .record-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            border-bottom: 1px solid #f0f0f0;
+            transition: all 0.3s ease;
+        }
+        
+        .record-item:last-child {
+            border-bottom: none;
+        }
+        
+        .record-item:hover {
+            background-color: rgba(138, 123, 255, 0.05);
+        }
+        
+        .record-info {
+            flex: 1;
+        }
+        
+        .record-date {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+        
+        .record-level {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        
+        .record-actions {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .action-button {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .view-button {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .view-button:hover {
+            background-color: #7a6bff;
+            transform: scale(1.1);
+        }
+        
+        .delete-button {
+            background-color: #f0f0f0;
+            color: #ff6b6b;
+        }
+        
+        .delete-button:hover {
+            background-color: rgba(255, 107, 107, 0.1);
+            transform: scale(1.1);
+        }
+        
+        .no-records {
+            text-align: center;
+            padding: 40px 0;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 状态栏 -->
+    <div class="status-bar">
+        <div class="time">9:41</div>
+        <div class="icons">
+            <i class="fa fa-signal"></i>
+            <i class="fa fa-wifi"></i>
+            <i class="fa fa-battery-full"></i>
+        </div>
+    </div>
+    
+    <!-- 顶部导航栏 -->
+    <div class="header">
+        <div class="back" onclick="goBack()"><i class="fa fa-arrow-left"></i></div>
+        <div class="title">我的历史压力记录</div>
+        <div></div>
+    </div>
+    
+    <!-- 中部内容区 -->
+    <div class="content">
+        <!-- 压力变化趋势折线图 -->
+        <div class="chart-section">
+            <h2>压力变化趋势</h2>
+            <div class="chart-container">
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- 历史评估记录列表 -->
+        <div class="records-section">
+            <h2>历史评估记录</h2>
+            
+            <div class="record-item">
+                <div class="record-info">
+                    <div class="record-date">2026-04-18 15:30</div>
+                    <div class="record-level">低压力</div>
+                </div>
+                <div class="record-actions">
+                    <div class="action-button view-button" onclick="viewRecord()">
+                        <i class="fa fa-eye"></i>
+                    </div>
+                    <div class="action-button delete-button" onclick="deleteRecord()">
+                        <i class="fa fa-trash"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="record-item">
+                <div class="record-info">
+                    <div class="record-date">2026-04-15 10:15</div>
+                    <div class="record-level">中等压力</div>
+                </div>
+                <div class="record-actions">
+                    <div class="action-button view-button" onclick="viewRecord()">
+                        <i class="fa fa-eye"></i>
+                    </div>
+                    <div class="action-button delete-button" onclick="deleteRecord()">
+                        <i class="fa fa-trash"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="record-item">
+                <div class="record-info">
+                    <div class="record-date">2026-04-10 14:45</div>
+                    <div class="record-level">高压力</div>
+                </div>
+                <div class="record-actions">
+                    <div class="action-button view-button" onclick="viewRecord()">
+                        <i class="fa fa-eye"></i>
+                    </div>
+                    <div class="action-button delete-button" onclick="deleteRecord()">
+                        <i class="fa fa-trash"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="record-item">
+                <div class="record-info">
+                    <div class="record-date">2026-04-05 09:20</div>
+                    <div class="record-level">中等压力</div>
+                </div>
+                <div class="record-actions">
+                    <div class="action-button view-button" onclick="viewRecord()">
+                        <i class="fa fa-eye"></i>
+                    </div>
+                    <div class="action-button delete-button" onclick="deleteRecord()">
+                        <i class="fa fa-trash"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 初始化趋势图
+        const ctx = document.getElementById('trendChart').getContext('2d');
+        const trendChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['4/5', '4/10', '4/15', '4/18'],
+                datasets: [{
+                    label: '压力水平',
+                    data: [65, 85, 60, 25],
+                    borderColor: '#8a7bff',
+                    backgroundColor: 'rgba(138, 123, 255, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        title: {
+                            display: true,
+                            text: '压力评分'
+                        }
+                    }
+                }
+            }
+        });
+        
+        function goBack() {
+            window.location.href = 'home.html';
+        }
+        
+        function viewRecord() {
+            // 查看单次历史完整报告
+            window.location.href = 'result.html';
+        }
+        
+        function deleteRecord() {
+            // 删除记录
+            if (confirm('确定要删除这条记录吗？')) {
+                // 实际应用中，这里会调用删除API
+                alert('记录已删除');
+            }
+        }
+    </script>
+</body>
+</html>

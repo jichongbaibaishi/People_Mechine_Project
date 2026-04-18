@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人中心 & 隐私设置页</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+        
+        :root {
+            --primary-color: #8a7bff;
+            --secondary-color: #b3a7ff;
+            --background-color: #f8f9fa;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --border-radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: var(--background-color);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+        
+        .status-bar {
+            height: 44px;
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .status-bar .time {
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .status-bar .icons {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .header {
+            height: 44px;
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .header .back {
+            font-size: 20px;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+        
+        .header .title {
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        
+        .content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .user-info {
+            background-color: white;
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .avatar i {
+            font-size: 32px;
+            color: white;
+        }
+        
+        .user-details {
+            flex: 1;
+        }
+        
+        .user-name {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+        
+        .user-status {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        
+        .settings-section {
+            background-color: white;
+            border-radius: var(--border-radius);
+            margin-bottom: 24px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+        
+        .settings-section-title {
+            padding: 16px 20px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .setting-item {
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+        
+        .setting-item:hover {
+            background-color: rgba(138, 123, 255, 0.05);
+        }
+        
+        .setting-name {
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+        
+        .setting-value {
+            font-size: 14px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .toggle {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            background-color: #e0e0e0;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .toggle.active {
+            background-color: var(--primary-color);
+        }
+        
+        .toggle-thumb {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background-color: white;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+        
+        .toggle.active .toggle-thumb {
+            left: 22px;
+        }
+        
+        .logout-button {
+            width: 100%;
+            padding: 14px;
+            background-color: white;
+            border: 1px solid #ff6b6b;
+            border-radius: var(--border-radius);
+            font-size: 16px;
+            color: #ff6b6b;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow);
+        }
+        
+        .logout-button:hover {
+            background-color: rgba(255, 107, 107, 0.05);
+        }
+    </style>
+</head>
+<body>
+    <!-- 状态栏 -->
+    <div class="status-bar">
+        <div class="time">9:41</div>
+        <div class="icons">
+            <i class="fa fa-signal"></i>
+            <i class="fa fa-wifi"></i>
+            <i class="fa fa-battery-full"></i>
+        </div>
+    </div>
+    
+    <!-- 顶部导航栏 -->
+    <div class="header">
+        <div class="back" onclick="goBack()"><i class="fa fa-arrow-left"></i></div>
+        <div class="title">个人中心</div>
+        <div></div>
+    </div>
+    
+    <!-- 中部内容区 -->
+    <div class="content">
+        <!-- 账号信息 -->
+        <div class="user-info">
+            <div class="avatar">
+                <i class="fa fa-user"></i>
+            </div>
+            <div class="user-details">
+                <div class="user-name">匿名用户</div>
+                <div class="user-status">当前为匿名模式</div>
+            </div>
+        </div>
+        
+        <!-- 隐私设置 -->
+        <div class="settings-section">
+            <div class="settings-section-title">隐私设置</div>
+            <div class="setting-item">
+                <div class="setting-name">匿名模式</div>
+                <div class="setting-value">
+                    <div class="toggle active" onclick="toggleAnonymous()">
+                        <div class="toggle-thumb"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="setting-item">
+                <div class="setting-name">隐私权限设置</div>
+                <div class="setting-value">
+                    <i class="fa fa-chevron-right"></i>
+                </div>
+            </div>
+            <div class="setting-item">
+                <div class="setting-name">数据管理</div>
+                <div class="setting-value">
+                    <i class="fa fa-chevron-right"></i>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 其他设置 -->
+        <div class="settings-section">
+            <div class="settings-section-title">其他</div>
+            <div class="setting-item">
+                <div class="setting-name">帮助说明</div>
+                <div class="setting-value">
+                    <i class="fa fa-chevron-right"></i>
+                </div>
+            </div>
+            <div class="setting-item">
+                <div class="setting-name">关于我们</div>
+                <div class="setting-value">
+                    <i class="fa fa-chevron-right"></i>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 退出登录按钮 -->
+        <button class="logout-button" onclick="logout()">退出登录</button>
+    </div>
+    
+    <script>
+        function goBack() {
+            window.location.href = 'home.html';
+        }
+        
+        function toggleAnonymous() {
+            const toggle = document.querySelector('.toggle');
+            toggle.classList.toggle('active');
+        }
+        
+        function logout() {
+            if (confirm('确定要退出登录吗？')) {
+                window.location.href = 'login.html';
+            }
+        }
+    </script>
+</body>
+</html>

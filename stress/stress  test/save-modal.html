@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>保存结果确认弹窗</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+        
+        :root {
+            --primary-color: #8a7bff;
+            --secondary-color: #b3a7ff;
+            --background-color: #f8f9fa;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --border-radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: rgba(0, 0, 0, 0.5);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .modal {
+            background-color: white;
+            border-radius: var(--border-radius);
+            padding: 32px 24px;
+            width: 90%;
+            max-width: 320px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            animation: slideUp 0.3s ease-in-out;
+        }
+        
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .modal-title {
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--text-primary);
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        
+        .modal-content {
+            font-size: 14px;
+            color: var(--text-secondary);
+            text-align: center;
+            line-height: 1.5;
+            margin-bottom: 32px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .modal-button {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: var(--border-radius);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .cancel-button {
+            background-color: white;
+            color: var(--text-primary);
+        }
+        
+        .cancel-button:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .save-button {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        
+        .save-button:hover {
+            background-color: #7a6bff;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+    </style>
+</head>
+<body>
+    <div class="modal">
+        <div class="modal-title">本次评估已完成</div>
+        <div class="modal-content">
+            <p>是否将本次压力数据保存至长期记忆历史库？</p>
+            <p class="text-xs mt-2 text-gray-500">（匿名用户默认不保存）</p>
+        </div>
+        <div class="button-group">
+            <button class="modal-button cancel-button" onclick="viewResult()">仅查看结果，不保存</button>
+            <button class="modal-button save-button" onclick="saveResult()">保存本次结果，加入历史记录</button>
+        </div>
+    </div>
+    
+    <script>
+        function viewResult() {
+            // 仅查看结果，不保存
+            window.location.href = 'result.html';
+        }
+        
+        function saveResult() {
+            // 保存结果，加入历史记录
+            window.location.href = 'result.html';
+        }
+        
+        // 点击空白处关闭弹窗
+        document.body.addEventListener('click', function(event) {
+            if (event.target === document.body) {
+                window.location.href = 'home.html';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 压力状态结果反馈详情页</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+        
+        :root {
+            --primary-color: #8a7bff;
+            --secondary-color: #b3a7ff;
+            --background-color: #f8f9fa;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --border-radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: var(--background-color);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+        
+        .status-bar {
+            height: 44px;
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .status-bar .time {
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .status-bar .icons {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .header {
+            height: 44px;
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .header .back {
+            font-size: 20px;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+        
+        .header .title {
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        
+        .content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .pressure-level {
+            background-color: white;
+            border-radius: var(--border-radius);
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+        
+        .pressure-level h1 {
+            font-size: 32px;
+            font-weight: 700;
+            color: #48dbfb;
+            margin: 0 0 8px 0;
+        }
+        
+        .pressure-level p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+        
+        .radar-chart {
+            background-color: white;
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow);
+        }
+        
+        .radar-chart h2 {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 20px;
+        }
+        
+        .dimension-scores {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        
+        .dimension-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background-color: var(--background-color);
+            border-radius: 8px;
+        }
+        
+        .dimension-name {
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+        
+        .dimension-score {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--primary-color);
+        }
+        
+        .interpretation {
+            background-color: white;
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow);
+        }
+        
+        .interpretation h2 {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+        }
+        
+        .interpretation p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin: 0;
+        }
+        
+        .suggestions {
+            background-color: white;
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow);
+        }
+        
+        .suggestions h2 {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+        }
+        
+        .suggestion-item {
+            display: flex;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+        
+        .suggestion-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        
+        .suggestion-icon i {
+            font-size: 16px;
+            color: white;
+        }
+        
+        .suggestion-content {
+            flex: 1;
+        }
+        
+        .suggestion-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+        
+        .suggestion-text {
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .action-button {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: var(--border-radius);
+            background-color: white;
+            font-size: 12px;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .action-button:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+        
+        .action-button i {
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 状态栏 -->
+    <div class="status-bar">
+        <div class="time">9:41</div>
+        <div class="icons">
+            <i class="fa fa-signal"></i>
+            <i class="fa fa-wifi"></i>
+            <i class="fa fa-battery-full"></i>
+        </div>
+    </div>
+    
+    <!-- 顶部导航栏 -->
+    <div class="header">
+        <div class="back" onclick="goHome()"><i class="fa fa-arrow-left"></i></div>
+        <div class="title">压力评估结果</div>
+        <div></div>
+    </div>
+    
+    <!-- 中部内容区 -->
+    <div class="content">
+        <!-- 压力等级总结 -->
+        <div class="pressure-level">
+            <h1>低压力</h1>
+            <p>您的压力水平处于健康范围</p>
+        </div>
+        
+        <!-- 四维压力雷达图 -->
+        <div class="radar-chart">
+            <h2>压力维度分析</h2>
+            <div class="chart-container">
+                <canvas id="radarChart"></canvas>
+            </div>
+            <div class="dimension-scores">
+                <div class="dimension-item">
+                    <div class="dimension-name">压力水平</div>
+                    <div class="dimension-score">25/100</div>
+                </div>
+                <div class="dimension-item">
+                    <div class="dimension-name">回避倾向</div>
+                    <div class="dimension-score">30/100</div>
+                </div>
+                <div class="dimension-item">
+                    <div class="dimension-name">自我效能</div>
+                    <div class="dimension-score">85/100</div>
+                </div>
+                <div class="dimension-item">
+                    <div class="dimension-name">应对方式</div>
+                    <div class="dimension-score">75/100</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 解读区 -->
+        <div class="interpretation">
+            <h2>压力状态解读</h2>
+            <p>您的压力水平处于健康范围，说明您能够很好地应对日常学习和生活中的压力。您具有较高的自我效能感和积极的应对方式，这有助于您在面对挑战时保持冷静和自信。</p>
+            <p class="mt-4">您的回避倾向较低，表明您能够积极面对问题而不是逃避。这种积极的态度将帮助您更好地适应校园生活，提高学习效率。</p>
+        </div>
+        
+        <!-- 建议区 -->
+        <div class="suggestions">
+            <h2>减压调节建议</h2>
+            <div class="suggestion-item">
+                <div class="suggestion-icon">
+                    <i class="fa fa-heartbeat"></i>
+                </div>
+                <div class="suggestion-content">
+                    <div class="suggestion-title">保持规律作息</div>
+                    <div class="suggestion-text">保证充足的睡眠时间，建立固定的作息时间，有助于维持良好的身心状态。</div>
+                </div>
+            </div>
+            <div class="suggestion-item">
+                <div class="suggestion-icon">
+                    <i class="fa fa-leaf"></i>
+                </div>
+                <div class="suggestion-content">
+                    <div class="suggestion-title">适当运动</div>
+                    <div class="suggestion-text">每天进行30分钟的有氧运动，如散步、慢跑或瑜伽，有助于释放压力。</div>
+                </div>
+            </div>
+            <div class="suggestion-item">
+                <div class="suggestion-icon">
+                    <i class="fa fa-coffee"></i>
+                </div>
+                <div class="suggestion-content">
+                    <div class="suggestion-title">放松训练</div>
+                    <div class="suggestion-text">学习深呼吸、冥想等放松技巧，在感到压力时及时调整心态。</div>
+                </div>
+            </div>
+            <div class="suggestion-item">
+                <div class="suggestion-icon">
+                    <i class="fa fa-comments"></i>
+                </div>
+                <div class="suggestion-content">
+                    <div class="suggestion-title">社交支持</div>
+                    <div class="suggestion-text">与朋友、家人分享感受，寻求社会支持，减轻心理负担。</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 功能按钮区 -->
+        <div class="action-buttons">
+            <button class="action-button" onclick="goToHistory()">
+                <i class="fa fa-history"></i>
+                <span>查看历史对比</span>
+            </button>
+            <button class="action-button" onclick="goToChat()">
+                <i class="fa fa-comments"></i>
+                <span>进入 AI 对话疏导</span>
+            </button>
+            <button class="action-button" onclick="goHome()">
+                <i class="fa fa-refresh"></i>
+                <span>重新开始测试</span>
+            </button>
+        </div>
+    </div>
+    
+    <script>
+        // 初始化雷达图
+        const ctx = document.getElementById('radarChart').getContext('2d');
+        const radarChart = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: ['压力水平', '回避倾向', '自我效能', '应对方式'],
+                datasets: [{
+                    label: '您的得分',
+                    data: [25, 30, 85, 75],
+                    backgroundColor: 'rgba(138, 123, 255, 0.2)',
+                    borderColor: 'rgba(138, 123, 255, 1)',
+                    borderWidth: 2,
+                    pointBackgroundColor: 'rgba(138, 123, 255, 1)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgba(138, 123, 255, 1)'
+                }]
+            },
+            options: {
+                scales: {
+                    r: {
+                        angleLines: {
+                            display: true
+                        },
+                        suggestedMin: 0,
+                        suggestedMax: 100
+                    }
+                }
+            }
+        });
+        
+        function goHome() {
+            window.location.href = 'home.html';
+        }
+        
+        function goToHistory() {
+            window.location.href = 'history.html';
+        }
+        
+        function goToChat() {
+            window.location.href = 'chat.html';
+        }
+    </script>
+</body>
+</html>

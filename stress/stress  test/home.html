@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App 首页・场景测试主页</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+        
+        :root {
+            --primary-color: #8a7bff;
+            --secondary-color: #b3a7ff;
+            --background-color: #f8f9fa;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --border-radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: var(--background-color);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+        
+        .status-bar {
+            height: 44px;
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .status-bar .time {
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .status-bar .icons {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .header {
+            height: 44px;
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .header .title {
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        
+        .header .icon {
+            font-size: 20px;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+        
+        .content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .scenario-cards {
+            margin-bottom: 32px;
+        }
+        
+        .scenario-card {
+            background-color: white;
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+        }
+        
+        .scenario-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .scenario-title {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+        
+        .scenario-description {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+        
+        .scenario-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .scenario-icon i {
+            font-size: 24px;
+            color: white;
+        }
+        
+        .description {
+            background-color: white;
+            border-radius: var(--border-radius);
+            padding: 16px;
+            margin-bottom: 32px;
+            box-shadow: var(--shadow);
+        }
+        
+        .description-text {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            text-align: center;
+        }
+        
+        .start-button {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow);
+        }
+        
+        .start-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 15px -3px rgba(138, 123, 255, 0.3);
+        }
+        
+        .tab-bar {
+            height: 83px;
+            background-color: white;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+        
+        .tab-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: #999999;
+            cursor: pointer;
+        }
+        
+        .tab-item.active {
+            color: var(--primary-color);
+        }
+        
+        .tab-item i {
+            font-size: 20px;
+        }
+        
+        .tab-item span {
+            font-size: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 状态栏 -->
+    <div class="status-bar">
+        <div class="time">9:41</div>
+        <div class="icons">
+            <i class="fa fa-signal"></i>
+            <i class="fa fa-wifi"></i>
+            <i class="fa fa-battery-full"></i>
+        </div>
+    </div>
+    
+    <!-- 顶部导航栏 -->
+    <div class="header">
+        <div class="icon" onclick="goToHistory()"><i class="fa fa-history"></i></div>
+        <div class="title">压力情景测评中心</div>
+        <div class="icon" onclick="goToProfile()"><i class="fa fa-user"></i></div>
+    </div>
+    
+    <!-- 中部内容区 -->
+    <div class="content">
+        <div class="scenario-cards">
+            <div class="scenario-card">
+                <div class="scenario-icon">
+                    <i class="fa fa-microphone"></i>
+                </div>
+                <div class="scenario-title">课堂发言压力场景</div>
+                <div class="scenario-description">模拟课堂上老师突然点名让你发言的情景，测试你在社交压力下的反应。</div>
+            </div>
+            
+            <div class="scenario-card">
+                <div class="scenario-icon">
+                    <i class="fa fa-book"></i>
+                </div>
+                <div class="scenario-title">考试 DDL 学业压力场景</div>
+                <div class="scenario-description">模拟考试前最后期限的情景，测试你在学业压力下的应对方式。</div>
+            </div>
+        </div>
+        
+        <div class="description">
+            <p class="description-text">我们将随机匹配真实校园高压场景，通过沉浸式体验帮助你了解自己的压力状态。</p>
+        </div>
+        
+        <button class="start-button" onclick="startTest()">开始情景压力测试</button>
+    </div>
+    
+    <!-- 底部 Tab 导航 -->
+    <div class="tab-bar">
+        <div class="tab-item active">
+            <i class="fa fa-home"></i>
+            <span>首页</span>
+        </div>
+        <div class="tab-item" onclick="goToHistory()">
+            <i class="fa fa-history"></i>
+            <span>历史</span>
+        </div>
+        <div class="tab-item" onclick="goToProfile()">
+            <i class="fa fa-user"></i>
+            <span>我的</span>
+        </div>
+    </div>
+    
+    <script>
+        function startTest() {
+            // 随机触发任意一个场景
+            const scenarios = ['scenario.html'];
+            const randomScenario = scenarios[Math.floor(Math.random() * scenarios.length)];
+            window.location.href = randomScenario;
+        }
+        
+        function goToHistory() {
+            window.location.href = 'history.html';
+        }
+        
+        function goToProfile() {
+            window.location.href = 'profile.html';
+        }
+    </script>
+</body>
+</html>
