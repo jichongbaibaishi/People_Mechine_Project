@@ -137,7 +137,6 @@ Authorization: Bearer <token>
 
 ### 7. 记录隐私协议同意
 
-`POST /api/privacy/consent`
 
 请求头：
 
@@ -192,7 +191,8 @@ Authorization: Bearer <token>
 Authorization: Bearer <token>
 ```
 
-同一个 Python 后端内可复用：
+同一`POST /api/privacy/consent`
+个 Python 后端内可复用：
 
 ```python
 from auth_backend.security import hash_token
