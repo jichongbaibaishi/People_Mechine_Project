@@ -67,7 +67,6 @@ def make_handler(database: Database) -> type[BaseHTTPRequestHandler]:
 
 
 class AuthAPIHandler(BaseHTTPRequestHandler):
-    db: Database
     server_version = "StressAuthBackend/1.0"
 
     def do_OPTIONS(self) -> None:

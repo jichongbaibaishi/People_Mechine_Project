@@ -1,7 +1,7 @@
 // ======================
 // 双模式兼容版：登录用户 + 匿名用户 都有历史记录
 // ======================
-const BASE_URL = "http://127.0.0.1:5001/api/record";
+const BASE_URL = "http://127.0.0.1:8000/api/record";
 
 // 初始化：匿名用户自动生成唯一ID（本地永久存储）
 function initAnonymousId() {

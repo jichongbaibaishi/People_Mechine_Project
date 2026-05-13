@@ -102,7 +102,6 @@
             width: 100%;
             height: 200px;
             border-radius: var(--border-radius);
-            background-image: url('https://images.unsplash.com/photo-1503676260728-1c00da094a0b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80');
             background-size: cover;
             background-position: center;
             margin-bottom: 20px;
@@ -153,12 +152,14 @@
             background-color: #e0e0e0;
             border-radius: 2px;
             overflow: hidden;
+            cursor: pointer;
         }
         
         .audio-progress-bar {
-            width: 30%;
+            width: 0%;
             height: 100%;
             background-color: var(--primary-color);
+            transition: width 0.1s linear;
         }
         
         .audio-buttons {
@@ -252,7 +253,7 @@
             transition: all 0.3s ease;
         }
         
-        .next-button:hover {
+        .next-button:hover:not(:disabled) {
             background-color: #7a6bff;
             transform: translateY(-2px);
             box-shadow: var(--shadow);
@@ -264,24 +265,63 @@
             transform: none;
         }
         
-        @keyframes pulse {
-            0% {
-                box-shadow: 0 0 0 0 rgba(138, 123, 255, 0.4);
-            }
-            70% {
-                box-shadow: 0 0 0 10px rgba(138, 123, 255, 0);
-            }
-            100% {
-                box-shadow: 0 0 0 0 rgba(138, 123, 255, 0);
-            }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
         }
         
-        .pulse {
-            animation: pulse 2s infinite;
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(138, 123, 255, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(138, 123, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(138, 123, 255, 0); }
+        }
+        
+        .pulse { animation: pulse 2s infinite; }
+        
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
 <body>
+    <!-- 加载遮罩 -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">正在生成情景内容...</div>
+    </div>
+    
     <!-- 状态栏 -->
     <div class="status-bar">
         <div class="time">9:41</div>
@@ -295,9 +335,11 @@
     <!-- 顶部导航栏 -->
     <div class="header">
         <div class="back" onclick="goBack()"><i class="fa fa-arrow-left"></i></div>
-        <div class="title">课堂发言压力场景</div>
-        <div class="progress">
+        <div class="title" id="scenarioTitle">课堂发言压力场景</div>
+        <div class="progress" id="progressBar">
             <div class="progress-dot active"></div>
+            <div class="progress-dot"></div>
+            <div class="progress-dot"></div>
             <div class="progress-dot"></div>
             <div class="progress-dot"></div>
         </div>
@@ -305,28 +347,27 @@
     
     <!-- 中部核心情景展示区 -->
     <div class="content">
-        <div class="scenario-image"></div>
+        <div class="scenario-image" id="scenarioImage"></div>
         
         <div class="scenario-text">
-            <p>上课铃声响起，老师走进教室。你坐在教室中间的位置，正在认真听讲。突然，老师停下来，环视了一下教室，然后点到了你的名字："请你来回答这个问题。"</p>
-            <p class="mt-4">你感到心跳加速，手心开始出汗。老师期待地看着你，同学们的目光也都集中在你身上。</p>
+            <p id="scenarioContent">加载中...</p>
         </div>
         
         <div class="audio-controls">
-            <div class="audio-button">
+            <div class="audio-button" id="playButton">
                 <i class="fa fa-play"></i>
             </div>
             <div class="audio-info">
                 <div class="audio-title">场景音频</div>
-                <div class="audio-progress">
-                    <div class="audio-progress-bar"></div>
+                <div class="audio-progress" id="audioProgress">
+                    <div class="audio-progress-bar" id="audioProgressBar"></div>
                 </div>
             </div>
             <div class="audio-buttons">
-                <div class="audio-button" style="background-color: #f0f0f0; color: var(--text-secondary);">
+                <div class="audio-button" style="background-color: #f0f0f0; color: var(--text-secondary);" id="prevButton">
                     <i class="fa fa-step-backward"></i>
                 </div>
-                <div class="audio-button" style="background-color: #f0f0f0; color: var(--text-secondary);">
+                <div class="audio-button" style="background-color: #f0f0f0; color: var(--text-secondary);" id="nextAudioButton">
                     <i class="fa fa-step-forward"></i>
                 </div>
             </div>
@@ -334,59 +375,391 @@
         
         <div class="interaction-area">
             <div class="interaction-title">滑动选择你的真实反应</div>
-            <div class="interaction-options">
-                <div class="option" onclick="selectOption('a')">
-                    <div class="option-text">紧张地站起来，结结巴巴地回答问题</div>
+            <div class="interaction-options" id="interactionOptions">
+                <div class="option" id="optionA" onclick="selectOption('a')">
+                    <div class="option-text" id="optionAText">选项A</div>
                 </div>
-                <div class="option" onclick="selectOption('b')">
-                    <div class="option-text">深吸一口气，冷静地回答问题</div>
+                <div class="option" id="optionB" onclick="selectOption('b')">
+                    <div class="option-text" id="optionBText">选项B</div>
                 </div>
             </div>
-            <div class="hint">左滑选择倾向 A，右滑选择倾向 B</div>
+            <div class="hint">点击选择你的反应倾向</div>
         </div>
         
-        <button class="next-button" id="nextButton" disabled onclick="nextStep()">下一个场景</button>
+        <button class="next-button" id="nextButton" disabled onclick="nextStep()">
+            <span id="nextButtonText">确认选择</span>
+        </button>
     </div>
     
     <script>
+        // 全局状态
         let selectedOption = null;
+        let currentSessionId = null;
+        let currentProgress = 1;
+        let totalNodes = 5;
+        let currentScenarioType = "";
+        let currentBranches = [];
+        let audioContext = null;
+        let audioSource = null;
+        let isPlaying = false;
+        let audioDuration = 0;
+        let audioCurrentTime = 0;
+        let audioInterval = null;
         
-        function goBack() {
-            window.location.href = 'home.html';
+        // 获取请求头
+        function getHeaders() {
+            const headers = { "Content-Type": "application/json" };
+            const token = localStorage.getItem("token");
+            if (token) {
+                headers["Authorization"] = "Bearer " + token;
+            } else {
+                headers["Anonymous-ID"] = getAnonymousId();
+            }
+            return headers;
         }
         
+        // 获取或创建匿名ID
+        function getAnonymousId() {
+            let id = localStorage.getItem("anonymous_id");
+            if (!id) {
+                id = "anon_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem("anonymous_id", id);
+            }
+            return id;
+        }
+        
+        // 返回首页
+        function goBack() {
+            if (confirm("确定要退出场景体验吗？")) {
+                window.location.href = 'home.html';
+            }
+        }
+        
+        // 选择选项
         function selectOption(option) {
             selectedOption = option;
             
-            // 移除所有选项的 active 类
             document.querySelectorAll('.option').forEach(el => el.classList.remove('active'));
+            document.getElementById('option' + option.toUpperCase()).classList.add('active');
             
-            // 添加当前选项的 active 类
-            document.querySelectorAll('.option')[option === 'a' ? 0 : 1].classList.add('active');
-            
-            // 启用下一步按钮
             document.getElementById('nextButton').disabled = false;
         }
         
-        function nextStep() {
-            // 模拟场景切换
-            // 实际应用中，这里会根据用户选择生成后续剧情
+        // 下一步
+        async function nextStep() {
+            console.log("DEBUG - nextStep called");
+            console.log("DEBUG - selectedOption:", selectedOption);
+            console.log("DEBUG - currentSessionId:", currentSessionId);
             
-            // 当所有场景完成后，跳转到评估页面
-            window.location.href = 'assessment.html';
+            if (!selectedOption || !currentSessionId) {
+                console.log("DEBUG - selectedOption or currentSessionId is empty");
+                return;
+            }
+            
+            document.getElementById('nextButton').disabled = true;
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            
+            try {
+                const branchIndex = selectedOption === 'a' ? 0 : 1;
+                const branchId = currentBranches[branchIndex]?.id || (selectedOption === 'a' ? 'branch_a' : 'branch_b');
+                
+                console.log("DEBUG - branchIndex:", branchIndex);
+                console.log("DEBUG - branchId:", branchId);
+                console.log("DEBUG - currentProgress:", currentProgress);
+                
+                console.log("DEBUG - Sending POST request to /api/sessions/choice...");
+                const response = await fetch('http://127.0.0.1:8000/api/sessions/choice', {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify({
+                        sessionId: currentSessionId,
+                        branchId: branchId,
+                        progress: currentProgress
+                    })
+                });
+                
+                console.log("DEBUG - Response status:", response.status);
+                console.log("DEBUG - Response ok:", response.ok);
+                
+                try {
+                    const data = await response.json();
+                    console.log("DEBUG - Response JSON parsed:", data);
+                    
+                    if (data.code === 200) {
+                        const result = data.data;
+                        console.log("DEBUG - Result from server:", result);
+                        console.log("DEBUG - Result progress:", result.progress);
+                        
+                        if (result.completed || result.showAssessment) {
+                            // 完成5个场景，跳转到评估页面
+                            console.log("DEBUG - Scenario completed, redirecting to assessment");
+                            window.location.href = 'assessment.html?sessionId=' + currentSessionId;
+                            return;
+                        }
+                        
+                        // 更新进度
+                        currentProgress = result.progress;
+                        console.log("DEBUG - Updated currentProgress to:", currentProgress);
+                        
+                        // 更新UI
+                        updateProgressBar();
+                        updateScenarioContent(result.currentNode, result.branches);
+                    } else {
+                        console.log("DEBUG - Server returned error:", data.msg);
+                        alert(data.msg || '操作失败');
+                    }
+                } catch (jsonError) {
+                    console.error('DEBUG - JSON parse error:', jsonError);
+                    const text = await response.text();
+                    console.log("DEBUG - Response text:", text);
+                    alert('解析响应失败，请重试');
+                }
+            } catch (error) {
+                console.error('DEBUG - Network error:', error);
+                alert('网络请求失败，请重试');
+            } finally {
+                document.getElementById('loadingOverlay').style.display = 'none';
+                selectedOption = null;
+                document.querySelectorAll('.option').forEach(el => el.classList.remove('active'));
+            }
         }
         
-        // 模拟音频播放
-        document.querySelector('.audio-button').addEventListener('click', function() {
-            const icon = this.querySelector('i');
-            if (icon.classList.contains('fa-play')) {
-                icon.classList.remove('fa-play');
-                icon.classList.add('fa-pause');
+        // 更新进度条
+        function updateProgressBar() {
+            const dots = document.querySelectorAll('.progress-dot');
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index < currentProgress);
+            });
+        }
+        
+        // 更新场景内容
+        function updateScenarioContent(node, branches) {
+            // 更新标题
+            if (currentScenarioType === 'classroom' || currentScenarioType === 'class_speech') {
+                document.getElementById('scenarioTitle').textContent = '课堂发言压力场景';
             } else {
-                icon.classList.remove('fa-pause');
-                icon.classList.add('fa-play');
+                document.getElementById('scenarioTitle').textContent = '考试DDL压力场景';
+            }
+            
+            // 更新图片
+            if (node.imageUrl) {
+                // 移除可能存在的反引号、引号和空格（包括全角字符）
+                let cleanImageUrl = node.imageUrl;
+                console.log("DEBUG - Original image URL:", cleanImageUrl);
+                console.log("DEBUG - URL length:", cleanImageUrl.length);
+                console.log("DEBUG - URL char codes:", [...cleanImageUrl].map(c => c.charCodeAt(0)));
+                // 移除所有类型的引号和空格
+                cleanImageUrl = cleanImageUrl.replace(/[\u0060\u2018\u2019\u201C\u201D\u0022\u0027\s]/g, '');
+                console.log("DEBUG - Cleaned image URL:", cleanImageUrl);
+                console.log("DEBUG - Cleaned URL length:", cleanImageUrl.length);
+                document.getElementById('scenarioImage').style.backgroundImage = `url(${cleanImageUrl})`;
+            }
+            
+            // 更新内容
+            document.getElementById('scenarioContent').textContent = node.content;
+            
+            // 更新选项
+            if (branches && branches.length >= 2) {
+                currentBranches = branches;
+                document.getElementById('optionAText').textContent = branches[0].text;
+                document.getElementById('optionBText').textContent = branches[1].text;
+            }
+            
+            // 重置音频
+            stopAudio();
+            
+            // 如果有音频URL，设置音频
+            if (node.audioUrl) {
+                setupAudio(node.audioUrl);
+            }
+        }
+        
+        // 初始化场景
+        async function initScenario() {
+            try {
+                console.log("DEBUG - initScenario called");
+                console.log("DEBUG - Headers:", getHeaders());
+                // 获取随机场景
+                const response = await fetch('http://127.0.0.1:8000/api/scenarios/random', {
+                    method: 'GET',
+                    headers: getHeaders()
+                });
+                
+                console.log("DEBUG - Response status:", response.status);
+                console.log("DEBUG - Response ok:", response.ok);
+                
+                const data = await response.json();
+                console.log("DEBUG - Response data:", data);
+                console.log("DEBUG - data.code:", data.code);
+                console.log("DEBUG - data.msg:", data.msg);
+                console.log("DEBUG - data.data:", data.data);
+                console.log("DEBUG - JSON stringify:", JSON.stringify(data, null, 2));
+                
+                if (data.code === 200) {
+                    const result = data.data;
+                    
+                    currentSessionId = result.sessionId;
+                    currentProgress = result.progress;
+                    totalNodes = result.totalNodes;
+                    currentScenarioType = result.scenario.type;
+                    currentBranches = result.branches;
+                    
+                    // 更新进度条
+                    updateProgressBar();
+                    
+                    // 更新场景内容
+                    updateScenarioContent(result.currentNode, result.branches);
+                    
+                    // 隐藏加载遮罩
+                    document.getElementById('loadingOverlay').style.display = 'none';
+                } else {
+                    alert(data.msg || '获取场景失败');
+                }
+            } catch (error) {
+                console.error('ERROR in initScenario:', error);
+                console.error('ERROR type:', error.type);
+                console.error('ERROR message:', error.message);
+                alert('网络请求失败，请检查服务器是否启动: ' + error.message);
+            }
+        }
+        
+        // 音频播放相关
+        function setupAudio(audioUrl) {
+            // 创建音频元素
+            if (audioSource) {
+                audioSource.pause();
+                audioSource = null;
+            }
+            
+            audioSource = new Audio(audioUrl);
+            audioSource.onloadedmetadata = function() {
+                audioDuration = audioSource.duration;
+            };
+            
+            audioSource.onended = function() {
+                stopAudio();
+            };
+        }
+        
+        function toggleAudio() {
+            if (!audioSource) {
+                // 如果没有音频URL，生成语音
+                generateSpeech();
+                return;
+            }
+            
+            if (isPlaying) {
+                stopAudio();
+            } else {
+                playAudio();
+            }
+        }
+        
+        function playAudio() {
+            if (!audioSource) return;
+            
+            audioSource.play().then(() => {
+                isPlaying = true;
+                document.querySelector('#playButton i').classList.remove('fa-play');
+                document.querySelector('#playButton i').classList.add('fa-pause');
+                
+                // 更新进度
+                audioInterval = setInterval(updateAudioProgress, 100);
+            }).catch(error => {
+                console.error('Audio play error:', error);
+                // 如果原生音频播放失败，尝试生成语音
+                generateSpeech();
+            });
+        }
+        
+        function stopAudio() {
+            if (audioSource) {
+                audioSource.pause();
+                audioSource.currentTime = 0;
+            }
+            
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+            
+            isPlaying = false;
+            audioCurrentTime = 0;
+            
+            document.querySelector('#playButton i').classList.remove('fa-pause');
+            document.querySelector('#playButton i').classList.add('fa-play');
+            document.getElementById('audioProgressBar').style.width = '0%';
+            
+            if (audioInterval) {
+                clearInterval(audioInterval);
+                audioInterval = null;
+            }
+        }
+        
+        function updateAudioProgress() {
+            if (!audioSource || !isPlaying) return;
+            
+            audioCurrentTime = audioSource.currentTime;
+            const progress = (audioCurrentTime / audioDuration) * 100;
+            document.getElementById('audioProgressBar').style.width = progress + '%';
+        }
+        
+        // 使用Web Speech API生成语音
+        function generateSpeech() {
+            const content = document.getElementById('scenarioContent').textContent;
+            
+            if ('speechSynthesis' in window) {
+                // 停止之前的语音
+                window.speechSynthesis.cancel();
+                
+                const utterance = new SpeechSynthesisUtterance(content);
+                utterance.lang = 'zh-CN';
+                utterance.rate = 0.9;
+                utterance.pitch = 1;
+                
+                utterance.onstart = function() {
+                    isPlaying = true;
+                    document.querySelector('#playButton i').classList.remove('fa-play');
+                    document.querySelector('#playButton i').classList.add('fa-pause');
+                };
+                
+                utterance.onend = function() {
+                    stopAudio();
+                };
+                
+                utterance.onerror = function() {
+                    stopAudio();
+                };
+                
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+        
+        // 事件监听
+        document.getElementById('playButton').addEventListener('click', toggleAudio);
+        
+        document.getElementById('prevButton').addEventListener('click', function() {
+            if (audioSource) {
+                audioSource.currentTime = Math.max(0, audioSource.currentTime - 5);
             }
         });
+        
+        document.getElementById('nextAudioButton').addEventListener('click', function() {
+            if (audioSource) {
+                audioSource.currentTime = Math.min(audioDuration, audioSource.currentTime + 5);
+            }
+        });
+        
+        document.getElementById('audioProgress').addEventListener('click', function(e) {
+            if (!audioSource) return;
+            
+            const rect = this.getBoundingClientRect();
+            const percent = (e.clientX - rect.left) / rect.width;
+            audioSource.currentTime = percent * audioDuration;
+        });
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', initScenario);
     </script>
 </body>
 </html>

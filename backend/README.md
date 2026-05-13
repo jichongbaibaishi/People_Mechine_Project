@@ -223,3 +223,7 @@ user = db.get_session_user(hash_token(token))
 ```powershell
 python -m unittest discover -s backend/tests
 ```
+
+- 启动测试：
+- 打开cmd,输入你的文件夹目录所在路径，例如：cd c:\Users\ASUS\Documents\trae_projects\People_Mechine_Project，回车
+- 在输入：python backend/app.py，回车，即可在网页端进行测试，按F12可以查看控制台输出
