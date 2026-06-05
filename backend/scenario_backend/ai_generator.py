@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import random
+import urllib.parse
 from typing import Any, Dict, List, Optional, Tuple
 from uuid import uuid4
 
@@ -27,23 +28,49 @@ SCENARIO_TYPES = {
     },
 }
 
-# 场景图片URL（使用可靠的图片服务）
-SCENARIO_IMAGES = {
-    "classroom": [
-        "https://picsum.photos/seed/classroom1/1280/720",
-        "https://picsum.photos/seed/classroom2/1280/720",
-        "https://picsum.photos/seed/classroom3/1280/720",
-        "https://picsum.photos/seed/classroom4/1280/720",
-        "https://picsum.photos/seed/classroom5/1280/720",
-    ],
-    "exam": [
-        "https://picsum.photos/seed/exam1/1280/720",
-        "https://picsum.photos/seed/exam2/1280/720",
-        "https://picsum.photos/seed/exam3/1280/720",
-        "https://picsum.photos/seed/exam4/1280/720",
-        "https://picsum.photos/seed/exam5/1280/720",
-    ],
+# 图片尺寸配置
+IMAGE_SIZES = {
+    "square": "512x512",
+    "portrait": "512x768",
+    "landscape": "1280x720",
+    "wide": "1024x576",
 }
+
+# 情绪关键词映射
+EMOTION_KEYWORDS = {
+    "nervous": ["紧张", "焦虑", "害怕", "心跳加速", "手心出汗", "发抖", "不安"],
+    "confident": ["自信", "坚定", "勇敢", "镇定", "从容"],
+    "tired": ["疲惫", "困倦", "累", "熬夜", "精疲力竭"],
+    "happy": ["开心", "高兴", "微笑", "成功", "满意"],
+    "sad": ["失落", "沮丧", "失望", "难过"],
+}
+
+# 场景关键词映射
+SETTING_KEYWORDS = {
+    "classroom": ["教室", "课堂", "讲台", "黑板", "课桌", "同学", "老师", "讨论"],
+    "exam": ["图书馆", "自习室", "宿舍", "考场", "书桌", "台灯", "书本", "复习"],
+}
+
+# 动作关键词映射
+ACTION_KEYWORDS = {
+    "speaking": ["发言", "说话", "回答", "讲述", "表达"],
+    "listening": ["倾听", "听", "观察", "注视"],
+    "studying": ["学习", "复习", "看书", "做题", "写作业"],
+    "thinking": ["思考", "想", "回忆", "沉思"],
+    "anxious": ["紧张", "焦虑", "担忧", "害怕"],
+}
+
+# 漫画风格模板
+COMIC_STYLE_TEMPLATES = [
+    "anime style",
+    "manga style",
+    "cartoon style",
+    "chibi style",
+    "studio ghibli style",
+    "pixar style animation",
+    "3d render cartoon",
+    "comic book illustration",
+]
 
 # 场景剧情模板 - 课堂发言
 CLASSROOM_TEMPLATES = {
@@ -301,23 +328,85 @@ CHOICE_TEMPLATES = {
     },
 }
 
-# 漫画图片描述模板
+# 漫画图片描述模板 - 增强版，包含更详细的场景描述
 IMAGE_PROMPTS = {
-    "classroom": [
-        "anime style classroom scene, student looking nervous while teacher asks a question, other students watching, detailed background with desks and chalkboard, warm lighting, emotional expression on student's face",
-        "anime illustration of group discussion in classroom, diverse students sharing ideas, one student hesitating to speak, colorful and expressive art style",
-        "anime classroom scene with teacher standing at front, student standing up to speak, looking anxious but determined, other students listening attentively",
-        "soft anime style, shy student raising hand in class, classmates encouraging, warm classroom atmosphere, detailed character expressions",
-        "anime school scene, student sweating nervously while speaking in front of class, teacher and students watching, dramatic lighting emphasizing tension",
-    ],
-    "exam": [
-        "anime style student studying late at night in dorm room, desk covered with books and notes, tired but determined expression, warm desk lamp light",
-        "anime library scene with student stressed about exams, surrounded by piles of textbooks, anxious expression, soft blue lighting",
-        "anime exam room scene, students focused on papers, one student looking worried, clock showing time pressure, quiet atmosphere",
-        "anime student sitting at desk with head in hands, overwhelmed by study materials, sunset light through window, melancholic mood",
-        "anime style student walking to exam hall, nervous expression, holding books, other students around, morning light, school building background",
-    ],
+    "classroom": {
+        "opening": [
+            "anime style classroom scene at morning, students sitting at desks, teacher entering the classroom, warm sunlight through windows, detailed classroom interior with chalkboard and books, soft anime art style",
+            "manga illustration of students chatting before class, one student looking anxious, classroom background with desks arranged in rows, colorful expressive characters",
+            "cartoon style classroom scene, students waiting for class to start, some talking some reading, realistic school setting with educational posters on walls",
+        ],
+        "development": [
+            "anime group discussion scene, diverse students in circle, one student hesitating to speak while others listen, classroom background with books and notebooks",
+            "manga style classroom debate, students expressing different opinions, teacher observing from side, dynamic composition showing interaction",
+            "cartoon illustration of classroom activity, students working in groups, one student looking nervous while others are engaged, detailed expressions",
+        ],
+        "climax": [
+            "anime dramatic scene, student standing up to speak in front of class, everyone watching attentively, sweat drops showing nervousness, teacher with encouraging smile",
+            "manga close-up of nervous student speaking, hands trembling, classmates in background, dramatic lighting emphasizing tension",
+            "cartoon style public speaking moment, student at podium with spotlight effect, audience watching, expressive facial features showing anxiety and determination",
+        ],
+        "ending": [
+            "anime happy ending scene, student finishing speech with relieved smile, classmates clapping, teacher giving thumbs up, warm positive atmosphere",
+            "manga illustration of student sitting down after speaking, looking proud, classmates smiling and nodding, classroom scene with soft lighting",
+            "cartoon celebration scene, students congratulating each other after class, successful presentation mood, cheerful colors",
+        ],
+    },
+    "exam": {
+        "opening": [
+            "anime library scene at afternoon, student sitting at desk surrounded by books, focused expression, soft natural light through large windows, realistic library interior",
+            "manga dorm room scene, student starting to study, textbooks spread on desk, computer open, roommate in background, cozy atmosphere",
+            "cartoon study scene, student at desk with cup of coffee, books and notes everywhere, determined look on face, warm desk lamp light",
+        ],
+        "development": [
+            "anime late night study scene, student tired but still working, clock showing midnight, messy desk with papers, dim lamp light creating mood",
+            "manga stressed student scene, head in hands looking at difficult problem, textbooks open around, frustrated expression, soft blue lighting",
+            "cartoon distraction scene, student trying to focus but looking at phone, books open but not being read, conflicted expression",
+        ],
+        "climax": [
+            "anime exam room scene, students writing intensely, one student looking worried at clock, papers spread on desk, quiet tense atmosphere",
+            "manga close-up of nervous student during exam, sweating, hands gripping pen tightly, exam paper with questions, dramatic shadows",
+            "cartoon pressure moment, student staring at difficult question, clock ticking, other students in background, anxious mood",
+        ],
+        "ending": [
+            "anime relief scene, student finishing exam, sighing with relief, putting pen down, sunlight through window, hopeful mood",
+            "manga exam finished scene, student walking out of classroom, feeling exhausted but relieved, other students discussing, soft afternoon light",
+            "cartoon celebration scene, students leaving exam hall, some happy some worried, friends meeting and talking, school building background",
+        ],
+    },
 }
+
+# 角色表情模板
+CHARACTER_EXPRESSIONS = {
+    "nervous": ["sweating", "anxious expression", "worried look", "trembling hands", "wide eyes", "blushing cheeks"],
+    "confident": ["smiling confidently", "upright posture", "determined gaze", "relaxed shoulders"],
+    "tired": ["sleepy eyes", "slumped posture", "yawn", "messy hair", "dark circles under eyes"],
+    "happy": ["bright smile", "sparkling eyes", "cheerful expression", "excited posture"],
+    "focused": ["intense gaze", "furrowed brow", "leaning forward", "concentrated look"],
+}
+
+# 场景细节模板
+SCENE_DETAILS = {
+    "classroom": ["wooden desks", "chalkboard with writing", "educational posters", "windows with sunlight", "books and notebooks", "backpacks"],
+    "exam": ["piles of textbooks", "study lamp", "coffee cup", "clock on wall", "notebooks with notes", "computer/laptop"],
+}
+
+# 背景风格模板
+BACKGROUND_STYLES = {
+    "daytime": ["bright daylight", "sunlight streaming through windows", "clear blue sky visible outside"],
+    "night": ["dim lamplight", "dark room", "moonlight through window", "city lights visible"],
+    "evening": ["warm sunset light", "orange and pink sky", "cozy atmosphere", "soft shadows"],
+}
+
+# 构图模板
+COMPOSITION_TEMPLATES = [
+    "medium shot showing character and background",
+    "close-up on character's face showing emotion",
+    "wide shot showing entire scene",
+    "over-the-shoulder view",
+    "eye-level perspective",
+    "slightly high angle looking down",
+]
 
 # 音频描述模板
 AUDIO_SCRIPTS = {
@@ -416,11 +505,9 @@ class AIScenarioGenerator:
         # 确定场景类型
         scenario_type = "classroom" if "老师" in content or "同学" in content else "exam"
         
-        # 生成图片URL（使用预定义的图片列表）
-        image_url = random.choice(SCENARIO_IMAGES[scenario_type])
-        
-        # 生成图片提示（用于记录）
-        image_prompt = random.choice(IMAGE_PROMPTS[scenario_type])
+        # 智能生成图片提示词和URL
+        image_prompt = self._generate_image_prompt(content, scenario_type, node_type)
+        image_url = self._generate_image_url(image_prompt, scenario_type)
         
         # 生成音频脚本
         audio_script = self._generate_audio(scenario_type, node_type)
@@ -435,20 +522,165 @@ class AIScenarioGenerator:
             "audio": audio_script,
             "used_variables": used_vars,
         }
+    
+    def _analyze_content(self, content: str) -> Dict[str, List[str]]:
+        """分析剧情内容，提取关键信息"""
+        analysis = {
+            "emotions": [],
+            "settings": [],
+            "actions": [],
+            "characters": [],
+        }
+        
+        # 分析情绪
+        for emotion, keywords in EMOTION_KEYWORDS.items():
+            for keyword in keywords:
+                if keyword in content:
+                    analysis["emotions"].append(emotion)
+                    break
+        
+        # 如果没有找到明确情绪，根据节点类型推断
+        if not analysis["emotions"]:
+            analysis["emotions"] = ["nervous"]
+        
+        # 分析场景
+        for setting, keywords in SETTING_KEYWORDS.items():
+            for keyword in keywords:
+                if keyword in content:
+                    analysis["settings"].append(setting)
+                    break
+        
+        # 分析动作
+        for action, keywords in ACTION_KEYWORDS.items():
+            for keyword in keywords:
+                if keyword in content:
+                    analysis["actions"].append(action)
+                    break
+        
+        # 分析角色
+        if "老师" in content:
+            analysis["characters"].append("teacher")
+        if "同学" in content:
+            analysis["characters"].append("classmates")
+        if "自己" in content or "你" in content:
+            analysis["characters"].append("student")
+        
+        return analysis
+    
+    def _generate_image_prompt(self, content: str, scenario_type: str, node_type: str) -> str:
+        """根据剧情内容生成精准的图片提示词"""
+        analysis = self._analyze_content(content)
+        
+        # 选择漫画风格
+        style = random.choice(COMIC_STYLE_TEMPLATES)
+        
+        # 获取基础场景提示
+        base_prompts = IMAGE_PROMPTS.get(scenario_type, {}).get(node_type, [])
+        base_prompt = random.choice(base_prompts) if base_prompts else ""
+        
+        # 添加情绪描述（安全抽样，避免列表元素不足）
+        emotion_descriptions = []
+        for emotion in analysis["emotions"]:
+            expressions = CHARACTER_EXPRESSIONS.get(emotion, [])
+            sample_size = min(2, len(expressions))
+            if sample_size > 0:
+                emotion_descriptions.extend(random.sample(expressions, sample_size))
+        
+        # 添加场景细节（安全抽样，避免列表元素不足）
+        scene_details_list = SCENE_DETAILS.get(scenario_type, [])
+        scene_details = random.sample(scene_details_list, min(3, len(scene_details_list)))
+        
+        # 添加背景风格（安全选择，避免空列表）
+        time_of_day = random.choice(["daytime", "evening"]) if scenario_type == "exam" else "daytime"
+        background_styles_list = BACKGROUND_STYLES.get(time_of_day, [])
+        background_style = random.choice(background_styles_list) if background_styles_list else ""
+        
+        # 添加构图
+        composition = random.choice(COMPOSITION_TEMPLATES)
+        
+        # 组合所有元素
+        prompt_parts = [style]
+        
+        if base_prompt:
+            prompt_parts.append(base_prompt)
+        
+        if emotion_descriptions:
+            prompt_parts.append(", ".join(emotion_descriptions))
+        
+        if scene_details:
+            prompt_parts.append(", ".join(scene_details))
+        
+        if background_style:
+            prompt_parts.append(background_style)
+        
+        if composition:
+            prompt_parts.append(composition)
+        
+        # 添加额外的艺术指导
+        prompt_parts.extend([
+            "high quality illustration",
+            "detailed character design",
+            "emotional storytelling",
+            "soft colors",
+            "professional digital art",
+        ])
+        
+        # 限制提示词长度
+        full_prompt = ", ".join(prompt_parts)
+        if len(full_prompt) > 500:
+            full_prompt = full_prompt[:500]
+        
+        return full_prompt
+    
+    def _generate_image_url(self, prompt: str, scenario_type: str) -> str:
+        """根据提示词生成图片URL - 使用稳定的预定义图片"""
+        
+        # 使用稳定的图片服务，确保图片能正常加载
+        # 根据场景类型选择预定义的相关图片
+        local_images = {
+            "classroom": [
+                "https://picsum.photos/seed/classroom123/1280/720",
+                "https://picsum.photos/seed/students456/1280/720",
+                "https://picsum.photos/seed/school789/1280/720",
+                "https://picsum.photos/seed/education111/1280/720",
+            ],
+            "exam": [
+                "https://picsum.photos/seed/library222/1280/720",
+                "https://picsum.photos/seed/study333/1280/720",
+                "https://picsum.photos/seed/books444/1280/720",
+                "https://picsum.photos/seed/desk555/1280/720",
+            ]
+        }
+        
+        # 根据场景类型选择图片
+        images = local_images.get(scenario_type, local_images["classroom"])
+        return random.choice(images)
 
     def _generate_audio(self, scenario_type: str, node_type: str) -> Dict[str, Any]:
         """生成音频脚本"""
-        scripts = AUDIO_SCRIPTS[scenario_type]
+        scripts = AUDIO_SCRIPTS.get(scenario_type, [])
         
-        # 根据节点类型选择合适的音频
+        # 如果没有脚本，返回默认值
+        if not scripts:
+            return {
+                "text": "",
+                "emotion": "neutral",
+                "duration": 0,
+            }
+        
+        # 根据节点类型选择合适的音频（安全选择，避免空列表）
         if node_type == "opening":
-            script = random.choice([s for s in scripts if s["emotion"] == "neutral"])
+            filtered = [s for s in scripts if s["emotion"] == "neutral"]
+            script = random.choice(filtered) if filtered else random.choice(scripts)
         elif node_type == "development":
-            script = random.choice([s for s in scripts if s["emotion"] in ["neutral", "urgent", "tired"]])
+            filtered = [s for s in scripts if s["emotion"] in ["neutral", "urgent", "tired"]]
+            script = random.choice(filtered) if filtered else random.choice(scripts)
         elif node_type == "climax":
-            script = random.choice([s for s in scripts if s["emotion"] in ["tense", "encouraging"]])
+            filtered = [s for s in scripts if s["emotion"] in ["tense", "encouraging"]]
+            script = random.choice(filtered) if filtered else random.choice(scripts)
         else:
-            script = random.choice([s for s in scripts if s["emotion"] in ["positive", "comforting", "neutral"]])
+            filtered = [s for s in scripts if s["emotion"] in ["positive", "comforting", "neutral"]]
+            script = random.choice(filtered) if filtered else random.choice(scripts)
         
         return {
             "text": script["text"],

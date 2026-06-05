@@ -102,10 +102,16 @@
             width: 100%;
             height: 200px;
             border-radius: var(--border-radius);
-            background-size: cover;
-            background-position: center;
             margin-bottom: 20px;
             box-shadow: var(--shadow);
+            overflow: hidden;
+            background-color: #f5f5f5;
+        }
+        
+        .scenario-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
         
         .scenario-text {
@@ -347,7 +353,9 @@
     
     <!-- 中部核心情景展示区 -->
     <div class="content">
-        <div class="scenario-image" id="scenarioImage"></div>
+        <div class="scenario-image" id="scenarioImage">
+            <img id="scenarioImgElement" src="" alt="场景图片" />
+        </div>
         
         <div class="scenario-text">
             <p id="scenarioContent">加载中...</p>
@@ -405,6 +413,34 @@
         let audioDuration = 0;
         let audioCurrentTime = 0;
         let audioInterval = null;
+        let speechUtterance = null;  // Web Speech API 语音实例
+        let speechStartTime = 0;     // 语音开始时间
+        let speechPausedTime = 0;    // 暂停时已播放时间
+        
+        // 备用图片列表
+        // 使用内联SVG图形，不需要外部网络
+        const scenarioSVGs = {
+            classroom: [
+                '<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720"><rect fill="#87CEEB" width="1280" height="360"/><rect fill="#90EE90" y="360" width="1280" height="360"/><rect x="100" y="280" width="1080" height="400" fill="#DEB887"/><rect x="150" y="350" width="200" height="8" fill="#654321"/><rect x="150" y="358" width="50" height="150" fill="#8B4513"/><rect x="300" y="358" width="50" height="150" fill="#8B4513"/><rect x="160" y="370" width="180" height="100" fill="#F5DEB3"/><rect x="400" y="350" width="200" height="8" fill="#654321"/><rect x="400" y="358" width="50" height="150" fill="#8B4513"/><rect x="550" y="358" width="50" height="150" fill="#8B4513"/><rect x="410" y="370" width="180" height="100" fill="#F5DEB3"/><rect x="650" y="350" width="200" height="8" fill="#654321"/><rect x="650" y="358" width="50" height="150" fill="#8B4513"/><rect x="800" y="358" width="50" height="150" fill="#8B4513"/><rect x="660" y="370" width="180" height="100" fill="#F5DEB3"/><rect x="850" y="350" width="200" height="8" fill="#654321"/><rect x="850" y="358" width="50" height="150" fill="#8B4513"/><rect x="1000" y="358" width="50" height="150" fill="#8B4513"/><rect x="860" y="370" width="180" height="100" fill="#F5DEB3"/><rect x="1100" y="350" width="150" height="8" fill="#654321"/><rect x="1100" y="358" width="37" height="150" fill="#8B4513"/><rect x="1213" y="358" width="37" height="150" fill="#8B4513"/><rect x="1110" y="370" width="130" height="100" fill="#F5DEB3"/><rect x="500" y="100" width="280" height="150" fill="#000"/><rect x="505" y="105" width="270" height="140" fill="#006400"/><rect x="520" y="120" width="240" height="40" fill="#FFF" font-size="24" text-anchor="middle" x="640" y="152">好好学习天天向上</rect><circle cx="200" cy="80" r="50" fill="#FFD700"/><rect x="900" y="80" width="150" height="100" fill="#FFE4E1"/></svg>',
+                '<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720"><rect fill="#E0E0E0" width="1280" height="720"/><rect x="100" y="50" width="1080" height="620" fill="#FFF"/><rect x="100" y="50" width="1080" height="30" fill="#424242"/><rect x="130" y="100" width="200" height="10" fill="#E0E0E0"/><rect x="130" y="130" width="200" height="10" fill="#E0E0E0"/><rect x="130" y="160" width="200" height="10" fill="#E0E0E0"/><rect x="130" y="190" width="200" height="10" fill="#E0E0E0"/><rect x="380" y="100" width="400" height="200" fill="#000"/><rect x="385" y="105" width="390" height="190" fill="#2F4F4F"/><circle cx="580" cy="200" r="50" fill="#32CD32"/><rect x="550" y="230" width="60" height="10" fill="#32CD32"/><rect x="400" y="150" width="50" height="30" fill="#FFD700"/><rect x="460" y="150" width="50" height="30" fill="#FF6347"/><rect x="520" y="150" width="50" height="30" fill="#4169E1"/><rect x="700" y="100" width="200" height="10" fill="#E0E0E0"/><rect x="700" y="130" width="200" height="10" fill="#E0E0E0"/><rect x="700" y="160" width="200" height="10" fill="#E0E0E0"/><rect x="700" y="190" width="200" height="10" fill="#E0E0E0"/><circle cx="640" cy="450" r="80" fill="#FFE4B5"/><circle cx="600" cy="430" r="15" fill="#333"/><circle cx="680" cy="430" r="15" fill="#333"/><path d="M620 470 Q640 490 660 470" stroke="#333" stroke-width="3" fill="none"/><rect x="500" y="530" width="280" height="120" fill="#4169E1"/><rect x="550" y="580" width="180" height="50" fill="#FFD700"/></svg>',
+                '<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720"><rect fill="#87CEEB" width="1280" height="360"/><rect fill="#228B22" y="360" width="1280" height="360"/><rect x="200" y="200" width="880" height="480" fill="#F5DEB3"/><rect x="200" y="200" width="880" height="30" fill="#8B4513"/><rect x="300" y="300" width="150" height="180" fill="#87CEEB"/><rect x="300" y="300" width="150" height="60" fill="#98FB98"/><rect x="500" y="300" width="150" height="180" fill="#87CEEB"/><rect x="500" y="300" width="150" height="60" fill="#98FB98"/><rect x="700" y="300" width="150" height="180" fill="#87CEEB"/><rect x="700" y="300" width="150" height="60" fill="#98FB98"/><rect x="900" y="300" width="150" height="180" fill="#87CEEB"/><rect x="900" y="300" width="150" height="60" fill="#98FB98"/><rect x="320" y="400" width="110" height="60" fill="#FFEFD5"/><rect x="520" y="400" width="110" height="60" fill="#FFEFD5"/><rect x="720" y="400" width="110" height="60" fill="#FFEFD5"/><rect x="920" y="400" width="110" height="60" fill="#FFEFD5"/><circle cx="150" cy="100" r="40" fill="#FFD700"/></svg>',
+            ],
+            exam: [
+                '<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720"><rect fill="#2F4F4F" width="1280" height="720"/><rect x="50" y="50" width="1180" height="620" fill="#1a1a2e"/><rect x="100" y="100" width="300" height="400" fill="#8B4513"/><rect x="110" y="110" width="280" height="380" fill="#2F4F4F"/><rect x="120" y="130" width="260" height="30" fill="#4169E1"/><rect x="120" y="170" width="260" height="30" fill="#4169E1"/><rect x="120" y="210" width="260" height="30" fill="#4169E1"/><rect x="120" y="250" width="260" height="30" fill="#4169E1"/><rect x="120" y="290" width="260" height="30" fill="#4169E1"/><rect x="120" y="330" width="260" height="30" fill="#4169E1"/><rect x="120" y="370" width="260" height="30" fill="#4169E1"/><rect x="500" y="100" width="300" height="400" fill="#8B4513"/><rect x="510" y="110" width="280" height="380" fill="#2F4F4F"/><rect x="520" y="130" width="260" height="30" fill="#808080"/><rect x="520" y="170" width="260" height="30" fill="#808080"/><rect x="520" y="210" width="260" height="30" fill="#808080"/><rect x="520" y="250" width="260" height="30" fill="#808080"/><rect x="520" y="290" width="260" height="30" fill="#808080"/><rect x="520" y="330" width="260" height="30" fill="#808080"/><rect x="520" y="370" width="260" height="30" fill="#808080"/><rect x="900" y="100" width="300" height="400" fill="#8B4513"/><rect x="910" y="110" width="280" height="380" fill="#2F4F4F"/><rect x="920" y="130" width="260" height="30" fill="#4169E1"/><rect x="920" y="170" width="260" height="30" fill="#4169E1"/><rect x="920" y="210" width="260" height="30" fill="#4169E1"/><rect x="920" y="250" width="260" height="30" fill="#4169E1"/><rect x="920" y="290" width="260" height="30" fill="#4169E1"/><rect x="920" y="330" width="260" height="30" fill="#4169E1"/><rect x="920" y="370" width="260" height="30" fill="#4169E1"/><circle cx="640" cy="580" r="50" fill="#FFE4E1"/><rect x="590" y="560" width="100" height="40" fill="#F5DEB3"/><rect x="580" y="590" width="120" height="30" fill="#DEB887"/></svg>',
+                '<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720"><rect fill="#F5F5DC" width="1280" height="720"/><rect x="200" y="200" width="880" height="320" fill="#87CEEB"/><rect x="200" y="520" width="880" height="100" fill="#228B22"/><rect x="300" y="300" width="200" height="150" fill="#FFEFD5"/><rect x="300" y="300" width="200" height="30" fill="#4169E1"/><rect x="320" y="350" width="160" height="80" fill="#FFF"/><rect x="330" y="360" width="60" height="20" fill="#E0E0E0"/><rect x="330" y="390" width="140" height="20" fill="#E0E0E0"/><rect x="330" y="420" width="100" height="20" fill="#E0E0E0"/><rect x="600" y="300" width="200" height="150" fill="#FFEFD5"/><rect x="600" y="300" width="200" height="30" fill="#DC143C"/><rect x="620" y="350" width="160" height="80" fill="#FFF"/><rect x="630" y="360" width="60" height="20" fill="#E0E0E0"/><rect x="630" y="390" width="140" height="20" fill="#E0E0E0"/><rect x="630" y="420" width="100" height="20" fill="#E0E0E0"/><rect x="900" y="300" width="150" height="150" fill="#FFEFD5"/><rect x="900" y="300" width="150" height="30" fill="#FFD700"/><rect x="920" y="350" width="110" height="80" fill="#FFF"/><rect x="930" y="360" width="50" height="20" fill="#E0E0E0"/><rect x="930" y="390" width="90" height="20" fill="#E0E0E0"/><rect x="930" y="420" width="70" height="20" fill="#E0E0E0"/><rect x="400" y="550" width="80" height="50" fill="#8B4513"/><rect x="500" y="550" width="80" height="50" fill="#8B4513"/><rect x="600" y="550" width="80" height="50" fill="#8B4513"/><rect x="700" y="550" width="80" height="50" fill="#8B4513"/><rect x="800" y="550" width="80" height="50" fill="#8B4513"/></svg>',
+                '<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720"><rect fill="#FFFAFA" width="1280" height="720"/><rect x="100" y="100" width="1080" height="520" fill="#FFF" stroke="#E0E0E0"/><rect x="150" y="150" width="400" height="350" fill="#FFF" stroke="#4169E1"/><rect x="180" y="180" width="340" height="280" fill="#FFF"/><rect x="200" y="200" width="300" height="20" fill="#E0E0E0"/><rect x="200" y="230" width="250" height="20" fill="#E0E0E0"/><rect x="200" y="260" width="280" height="20" fill="#E0E0E0"/><rect x="200" y="290" width="220" height="20" fill="#E0E0E0"/><rect x="200" y="320" width="260" height="20" fill="#E0E0E0"/><rect x="200" y="350" width="240" height="20" fill="#E0E0E0"/><rect x="200" y="380" width="270" height="20" fill="#E0E0E0"/><rect x="200" y="410" width="230" height="20" fill="#E0E0E0"/><rect x="600" y="150" width="400" height="350" fill="#FFF" stroke="#DC143C"/><rect x="630" y="180" width="340" height="280" fill="#FFF"/><rect x="650" y="200" width="300" height="20" fill="#DC143C"/><rect x="650" y="230" width="250" height="20" fill="#E0E0E0"/><rect x="650" y="260" width="280" height="20" fill="#E0E0E0"/><rect x="650" y="290" width="220" height="20" fill="#E0E0E0"/><rect x="650" y="320" width="260" height="20" fill="#E0E0E0"/><rect x="650" y="350" width="240" height="20" fill="#E0E0E0"/><rect x="650" y="380" width="270" height="20" fill="#E0E0E0"/><rect x="650" y="410" width="230" height="20" fill="#E0E0E0"/><rect x="300" y="520" width="100" height="40" fill="#4169E1"/><rect x="700" y="520" width="100" height="40" fill="#DC143C"/></svg>',
+            ],
+            default: [
+                '<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720"><rect fill="#E0E0E0" width="1280" height="720"/><circle cx="640" cy="360" r="200" fill="#4169E1"/><circle cx="640" cy="360" r="150" fill="#87CEEB"/><circle cx="640" cy="360" r="100" fill="#B0E0E6"/><text x="640" y="375" fill="#FFF" font-size="36" text-anchor="middle">学习场景</text></svg>',
+                '<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720"><rect fill="#F5F5F5" width="1280" height="720"/><rect x="300" y="200" width="680" height="320" fill="#FFF" stroke="#E0E0E0"/><rect x="400" y="250" width="480" height="80" fill="#4169E1"/><text x="640" y="305" fill="#FFF" font-size="28" text-anchor="middle">AI情景体验</text><rect x="400" y="380" width="480" height="120" fill="#FFF" stroke="#E0E0E0"/><text x="640" y="455" fill="#666" font-size="20" text-anchor="middle">沉浸式学习体验平台</text></svg>',
+            ]
+        };
+        
+        // 获取场景SVG
+        function getFallbackImage(scenarioType) {
+            const svgs = scenarioSVGs[scenarioType] || scenarioSVGs.default;
+            return 'data:image/svg+xml,' + encodeURIComponent(svgs[Math.floor(Math.random() * svgs.length)]);
+        }
         
         // 获取请求头
         function getHeaders() {
@@ -542,18 +578,30 @@
             }
             
             // 更新图片
-            if (node.imageUrl) {
-                // 移除可能存在的反引号、引号和空格（包括全角字符）
-                let cleanImageUrl = node.imageUrl;
-                console.log("DEBUG - Original image URL:", cleanImageUrl);
-                console.log("DEBUG - URL length:", cleanImageUrl.length);
-                console.log("DEBUG - URL char codes:", [...cleanImageUrl].map(c => c.charCodeAt(0)));
-                // 移除所有类型的引号和空格
-                cleanImageUrl = cleanImageUrl.replace(/[\u0060\u2018\u2019\u201C\u201D\u0022\u0027\s]/g, '');
-                console.log("DEBUG - Cleaned image URL:", cleanImageUrl);
-                console.log("DEBUG - Cleaned URL length:", cleanImageUrl.length);
-                document.getElementById('scenarioImage').style.backgroundImage = `url(${cleanImageUrl})`;
-            }
+            const scenarioImageEl = document.getElementById('scenarioImage');
+            const imgElement = document.getElementById('scenarioImgElement');
+            
+            // 设置默认背景色
+            scenarioImageEl.style.backgroundColor = '#f5f5f5';
+            imgElement.style.display = 'none';
+            imgElement.src = '';
+            
+            // 直接使用备用图片，确保图片能正常显示
+            const fallbackUrl = getFallbackImage(currentScenarioType);
+            console.log("DEBUG - Using fallback image:", fallbackUrl);
+            
+            // 使用img标签直接加载图片
+            imgElement.onload = function() {
+                console.log("DEBUG - Image loaded successfully");
+                imgElement.style.display = 'block';
+                scenarioImageEl.style.backgroundColor = 'transparent';
+            };
+            imgElement.onerror = function(event) {
+                console.error('Image load failed:', event);
+                // 如果备用图片也失败，显示一个简单的背景图案
+                scenarioImageEl.style.background = '#f5f5f5 url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Cg fill=\'%23cccccc\' fill-opacity=\'0.4\'%3E%3Cpath d=\'M0 20L20 0L40 20L20 40Z\'/%3E%3C/g%3E%3C/svg%3E") repeat';
+            };
+            imgElement.src = fallbackUrl;
             
             // 更新内容
             document.getElementById('scenarioContent').textContent = node.content;
@@ -565,7 +613,7 @@
                 document.getElementById('optionBText').textContent = branches[1].text;
             }
             
-            // 重置音频
+            // 重要：停止当前所有音频播放（包括Web Speech）
             stopAudio();
             
             // 如果有音频URL，设置音频
@@ -625,7 +673,6 @@
         
         // 音频播放相关
         function setupAudio(audioUrl) {
-            // 创建音频元素
             if (audioSource) {
                 audioSource.pause();
                 audioSource = null;
@@ -642,12 +689,6 @@
         }
         
         function toggleAudio() {
-            if (!audioSource) {
-                // 如果没有音频URL，生成语音
-                generateSpeech();
-                return;
-            }
-            
             if (isPlaying) {
                 stopAudio();
             } else {
@@ -656,26 +697,28 @@
         }
         
         function playAudio() {
-            if (!audioSource) return;
-            
-            audioSource.play().then(() => {
-                isPlaying = true;
-                document.querySelector('#playButton i').classList.remove('fa-play');
-                document.querySelector('#playButton i').classList.add('fa-pause');
-                
-                // 更新进度
-                audioInterval = setInterval(updateAudioProgress, 100);
-            }).catch(error => {
-                console.error('Audio play error:', error);
-                // 如果原生音频播放失败，尝试生成语音
+            if (audioSource) {
+                audioSource.play().then(() => {
+                    isPlaying = true;
+                    updatePlayButton(true);
+                    audioInterval = setInterval(updateAudioProgress, 100);
+                }).catch(error => {
+                    console.error('Audio play error:', error);
+                    generateSpeech();
+                });
+            } else {
                 generateSpeech();
-            });
+            }
         }
         
         function stopAudio() {
             if (audioSource) {
                 audioSource.pause();
                 audioSource.currentTime = 0;
+            }
+            
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
             }
             
             if (audioContext) {
@@ -686,8 +729,7 @@
             isPlaying = false;
             audioCurrentTime = 0;
             
-            document.querySelector('#playButton i').classList.remove('fa-pause');
-            document.querySelector('#playButton i').classList.add('fa-play');
+            updatePlayButton(false);
             document.getElementById('audioProgressBar').style.width = '0%';
             
             if (audioInterval) {
@@ -696,59 +738,87 @@
             }
         }
         
+        function updatePlayButton(isPlayingState) {
+            const icon = document.querySelector('#playButton i');
+            if (isPlayingState) {
+                icon.classList.remove('fa-play');
+                icon.classList.add('fa-pause');
+            } else {
+                icon.classList.remove('fa-pause');
+                icon.classList.add('fa-play');
+            }
+        }
+        
         function updateAudioProgress() {
-            if (!audioSource || !isPlaying) return;
-            
-            audioCurrentTime = audioSource.currentTime;
-            const progress = (audioCurrentTime / audioDuration) * 100;
-            document.getElementById('audioProgressBar').style.width = progress + '%';
+            if (audioSource && isPlaying) {
+                audioCurrentTime = audioSource.currentTime;
+                const progress = (audioCurrentTime / audioDuration) * 100;
+                document.getElementById('audioProgressBar').style.width = progress + '%';
+            }
         }
         
         // 使用Web Speech API生成语音
         function generateSpeech() {
             const content = document.getElementById('scenarioContent').textContent;
             
-            if ('speechSynthesis' in window) {
-                // 停止之前的语音
-                window.speechSynthesis.cancel();
-                
-                const utterance = new SpeechSynthesisUtterance(content);
-                utterance.lang = 'zh-CN';
-                utterance.rate = 0.9;
-                utterance.pitch = 1;
-                
-                utterance.onstart = function() {
-                    isPlaying = true;
-                    document.querySelector('#playButton i').classList.remove('fa-play');
-                    document.querySelector('#playButton i').classList.add('fa-pause');
-                };
-                
-                utterance.onend = function() {
-                    stopAudio();
-                };
-                
-                utterance.onerror = function() {
-                    stopAudio();
-                };
-                
-                window.speechSynthesis.speak(utterance);
+            if (!('speechSynthesis' in window)) {
+                console.warn('Web Speech API not supported');
+                return;
+            }
+            
+            // 停止之前的语音
+            window.speechSynthesis.cancel();
+            
+            speechUtterance = new SpeechSynthesisUtterance(content);
+            speechUtterance.lang = 'zh-CN';
+            speechUtterance.rate = 0.9;
+            speechUtterance.pitch = 1;
+            
+            speechUtterance.onstart = function() {
+                isPlaying = true;
+                speechStartTime = Date.now();
+                updatePlayButton(true);
+            };
+            
+            speechUtterance.onend = function() {
+                stopAudio();
+            };
+            
+            speechUtterance.onerror = function(event) {
+                console.error('Speech error:', event.error);
+                // 不立即停止，允许用户重新尝试播放
+            };
+            
+            window.speechSynthesis.speak(speechUtterance);
+        }
+        
+        // 快退5秒
+        function skipBackward() {
+            if (audioSource && isPlaying) {
+                audioSource.currentTime = Math.max(0, audioSource.currentTime - 5);
+            } else if (!audioSource && isPlaying) {
+                // Web Speech API不支持快退，停止后重新生成语音从头播放
+                stopAudio();
+                setTimeout(() => generateSpeech(), 100);
+            }
+        }
+        
+        // 快进5秒
+        function skipForward() {
+            if (audioSource && isPlaying) {
+                audioSource.currentTime = Math.min(audioDuration, audioSource.currentTime + 5);
+            } else if (!audioSource && isPlaying) {
+                // Web Speech API不支持快进，停止当前语音
+                stopAudio();
             }
         }
         
         // 事件监听
         document.getElementById('playButton').addEventListener('click', toggleAudio);
         
-        document.getElementById('prevButton').addEventListener('click', function() {
-            if (audioSource) {
-                audioSource.currentTime = Math.max(0, audioSource.currentTime - 5);
-            }
-        });
+        document.getElementById('prevButton').addEventListener('click', skipBackward);
         
-        document.getElementById('nextAudioButton').addEventListener('click', function() {
-            if (audioSource) {
-                audioSource.currentTime = Math.min(audioDuration, audioSource.currentTime + 5);
-            }
-        });
+        document.getElementById('nextAudioButton').addEventListener('click', skipForward);
         
         document.getElementById('audioProgress').addEventListener('click', function(e) {
             if (!audioSource) return;
