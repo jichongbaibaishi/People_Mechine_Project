@@ -16,6 +16,7 @@ from scenario_backend import Database as ScenarioDatabase
 from scenario_backend.api import ScenarioAPIHandler
 from result_backend import Database as ResultDatabase
 from result_backend.api import ResultAPIHandler
+from micro_assessment.api import MicroAssessmentAPIHandler
 
 # 前端静态文件目录（注意目录名中有两个空格）
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "stress" / "stress  test"
@@ -24,7 +25,7 @@ FRONTEND_DIR = Path(__file__).resolve().parent.parent / "stress" / "stress  test
 def make_combined_handler(auth_db: AuthDatabase, scenario_db: ScenarioDatabase, result_db: ResultDatabase) -> type:
     """Create a combined handler that routes requests to appropriate backend modules."""
     
-    class CombinedHandler(ScenarioAPIHandler, AuthAPIHandler, ResultAPIHandler):
+    class CombinedHandler(ScenarioAPIHandler, AuthAPIHandler, ResultAPIHandler, MicroAssessmentAPIHandler):
         server_version = "StressAppBackend/2.0"
         
         def __init__(self, *args, **kwargs):
@@ -46,6 +47,10 @@ def make_combined_handler(auth_db: AuthDatabase, scenario_db: ScenarioDatabase, 
                 self._serve_static_file(path)
                 return
             
+            if path.startswith("/api/micro-assessment/"):
+                print(f"DEBUG - Routing to MicroAssessmentAPIHandler: {path}")
+                self.do_GET_micro()
+                return
             # API请求路由
             if path.startswith("/api/record"):
                 print(f"DEBUG - Routing to ResultAPIHandler: {path}")
@@ -68,6 +73,10 @@ def make_combined_handler(auth_db: AuthDatabase, scenario_db: ScenarioDatabase, 
             try:
                 path = self._get_path()
                 print(f"DEBUG - do_POST called with path: {path}")
+                if path.startswith("/api/micro-assessment/"):
+                    print("DEBUG - Routing to MicroAssessmentAPIHandler")
+                    self.do_POST_micro()
+                    return
                 if path.startswith("/api/record"):
                     print("DEBUG - Routing to ResultAPIHandler")
                     ResultAPIHandler.do_POST(self)
