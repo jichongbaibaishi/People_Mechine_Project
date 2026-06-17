@@ -47,7 +47,6 @@
     <script>
         let radarChart = null;
 
-        // 渲染雷达图（修复版）
         function renderRadar(data = [70, 50, 80, 60]) {
             const ctx = document.getElementById('radarChart').getContext('2d');
             if (radarChart) radarChart.destroy();
@@ -72,11 +71,37 @@
             });
         }
 
-        // 加载数据（修复版）
+        // ============================================================
+        // 数据加载：优先展示 localStorage 中的最新结果
+        // ============================================================
         async function loadData() {
             try {
+                // 1. 检查是否有实时结果（来自 assessment.html）
+                const storedResult = localStorage.getItem('assessmentResult');
+                if (storedResult) {
+                    const data = JSON.parse(storedResult);
+                    const score = data.comprehensive_risk?.index || 0;
+                    document.getElementById("score").innerText = score;
+                    document.getElementById("suggest").innerText = data.suggestions?.join('；') || '暂无建议';
+                    
+                    // 雷达图数据（四个维度得分 * 20 映射到 0-100）
+                    const radarData = [
+                        data.dimensions?.pressure?.score || 0,
+                        data.dimensions?.avoidance?.score || 0,
+                        data.dimensions?.self_efficacy?.score || 0,
+                        data.dimensions?.coping?.score || 0
+                    ].map(s => s * 20);
+                    renderRadar(radarData);
+                    
+                    // 展示完后清除，避免下次打开还显示旧数据（但保留用于历史记录查看）
+                    // 注意：如果用户是通过历史记录进入，则不应清除，所以此处不自动清除，让用户自行决定
+                    return;
+                }
+
+                // 2. 没有实时结果，尝试从历史记录接口读取
                 const recordId = sessionStorage.getItem("currentRecordId");
                 if (!recordId) {
+                    // 没有任何数据，显示默认值
                     document.getElementById("score").innerText = "65";
                     document.getElementById("suggest").innerText = "中度压力，建议合理安排作息，适当放松身心";
                     renderRadar();

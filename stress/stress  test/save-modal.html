@@ -11,7 +11,7 @@
         .modal-fade { animation: fadeIn 0.3s ease-out forwards; }
         .modal-slide { animation: slideUp 0.4s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0), opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
@@ -50,40 +50,61 @@
     </div>
 
     <script>
-        // 默认评估数据
-        const mockData = {
-            title: "",
-            desc: "",
-            score: 65,
-            radar: [70, 50, 80, 60],
-            visual: { level: "中度压力", suggest: "建议适当休息，调整作息" }
-        };
-
-        // 仅查看结果
-        function viewResult() {
-            sessionStorage.setItem("currentRecordId", "");
-            location.href = "result.html";
+        // ============================================================
+        // 从 localStorage 读取评估结果
+        // ============================================================
+        function getResultData() {
+            try {
+                const stored = localStorage.getItem('assessmentResult');
+                if (stored) {
+                    const data = JSON.parse(stored);
+                    return {
+                        title: "",
+                        desc: "",
+                        score: data.comprehensive_risk?.index || 0,
+                        radar: [
+                            data.dimensions?.pressure?.score || 0,
+                            data.dimensions?.avoidance?.score || 0,
+                            data.dimensions?.self_efficacy?.score || 0,
+                            data.dimensions?.coping?.score || 0
+                        ].map(s => s * 20), // 1~5 映射到 20~100
+                        visual: {
+                            level: data.comprehensive_risk?.level || '未知',
+                            suggest: data.suggestions?.join('；') || '暂无建议'
+                        }
+                    };
+                }
+            } catch (e) {
+                console.error('读取评估结果失败:', e);
+            }
+            // 兜底
+            return { title: "", desc: "", score: 0, radar: [0,0,0,0], visual: { level: "未知", suggest: "无数据" } };
         }
 
-        // ✅【修复】删除了强制token校验，匿名模式直接可用
+        function viewResult() {
+            // 直接跳转结果页，result.html 会读取 localStorage
+            window.location.href = 'result.html';
+        }
+
         async function saveResult() {
+            const title = document.getElementById("resultTitle").value.trim();
+            if (!title) {
+                alert("请输入结果名称！");
+                return;
+            }
+
+            const resultData = getResultData();
+            resultData.title = title;
+            resultData.desc = document.getElementById("resultDesc").value;
+
             try {
-                const title = document.getElementById("resultTitle").value.trim();
-                if (!title) {
-                    alert("请输入结果名称！");
-                    return;
-                }
-
-                // 组装数据
-                mockData.title = title;
-                mockData.desc = document.getElementById("resultDesc").value;
-
-                // 调用保存接口
-                const res = await memoryManager.saveRecord(mockData);
+                const res = await memoryManager.saveRecord(resultData);
                 if (res.code === 200) {
                     sessionStorage.setItem("currentRecordId", res.data.id);
+                    // 保存成功后，清除 localStorage 中临时数据（避免重复使用）
+                    localStorage.removeItem('assessmentResult');
                     alert("保存成功！");
-                    location.href = "result.html";
+                    window.location.href = "result.html";
                 } else {
                     alert("保存失败：" + res.msg);
                 }
@@ -93,9 +114,21 @@
             }
         }
 
-        // 点击空白返回首页
+        // 点击空白区域返回首页
         document.getElementById("modalBg").onclick = () => {
-            location.href = "home.html";
+            if (confirm("确定要退出吗？未保存的结果将丢失。")) {
+                localStorage.removeItem('assessmentResult');
+                window.location.href = "home.html";
+            }
+        };
+
+        // 如果 localStorage 中没有数据，提示并跳转
+        window.onload = function() {
+            const stored = localStorage.getItem('assessmentResult');
+            if (!stored) {
+                alert("未找到评估结果，请先完成答题。");
+                window.location.href = "assessment.html";
+            }
         };
     </script>
 </body>

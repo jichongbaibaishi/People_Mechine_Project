@@ -340,6 +340,7 @@ class ScenarioAPIHandler(BaseHTTPRequestHandler):
                     "progress": 5,
                     "totalNodes": 5,
                     "showAssessment": True,
+                    "scenarioType": scenario_type,  # 新增：返回场景类型
                 })
                 return
             

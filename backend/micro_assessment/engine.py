@@ -1,7 +1,6 @@
 # backend/micro_assessment/engine.py
 from typing import List, Dict, Any
 from .authority_refs import CRI_THRESHOLDS
-from .questions import QUESTION_SET
 
 class AssessmentResult:
     def __init__(self, dimensions, comprehensive_risk, suggestions):

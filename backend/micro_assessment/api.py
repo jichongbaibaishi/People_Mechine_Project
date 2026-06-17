@@ -1,7 +1,7 @@
 # backend/micro_assessment/api.py
 import json
 from http import HTTPStatus
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 
 # 使用绝对导入（相对于 backend 目录）
 from micro_assessment.engine import calculate_assessment
@@ -15,11 +15,17 @@ class MicroAssessmentAPIHandler:
     
     def do_GET_micro(self) -> None:
         """处理 GET 请求（获取题库）"""
-        path = self._get_path()
-        
+        parsed_path = urlparse(self.path)
+        path = parsed_path.path
+    
         if path == "/api/micro-assessment/questions":
             try:
-                questions = get_question_set()
+                # 获取 scenario 参数（默认为 default）
+                query_params = parse_qs(parsed_path.query)
+                scenario = query_params.get('scenario', ['default'])[0]
+            
+                # 根据场景获取对应的题目
+                questions = get_question_set(scenario)
                 self._send_json_response(200, {"code": 0, "data": questions, "msg": "success"})
             except Exception as e:
                 self._send_json_response(500, {"code": 500, "data": None, "msg": str(e)})

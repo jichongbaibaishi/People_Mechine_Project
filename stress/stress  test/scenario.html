@@ -406,6 +406,7 @@
         let currentProgress = 1;
         let totalNodes = 5;
         let currentScenarioType = "";
+        let currentScenarioName = "";
         let currentBranches = [];
         let audioContext = null;
         let audioSource = null;
@@ -526,10 +527,25 @@
                         console.log("DEBUG - Result from server:", result);
                         console.log("DEBUG - Result progress:", result.progress);
                         
+                        // scenario.html 中的 nextStep 函数
                         if (result.completed || result.showAssessment) {
-                            // 完成5个场景，跳转到评估页面
                             console.log("DEBUG - Scenario completed, redirecting to assessment");
-                            window.location.href = 'assessment.html?sessionId=' + currentSessionId;
+    
+                            // 根据场景类型生成不同的回顾文案
+                            let sceneText = '';
+                            if (currentScenarioType === 'social') {
+                                sceneText = '你刚刚完成了课堂发言压力场景的沉浸式体验。面对老师的提问和同学们的目光，你经历了紧张与挑战。';
+                            } else if (currentScenarioType === 'academic') {
+                                sceneText = '你刚刚完成了考试DDL学业压力场景的沉浸式体验。在复习备考的过程中，你面对了时间压力和学业挑战。';
+                            } else {
+                                sceneText = '你刚刚完成了一段压力情景体验。';
+                            }
+    
+                            // 编码后作为 scene 参数传递
+                            const encodedScene = encodeURIComponent(sceneText);
+                            const scenarioType = currentScenarioType || 'default';
+    
+                            window.location.href = 'assessment.html?sessionId=' + currentSessionId + '&scenario=' + scenarioType + '&scene=' + encodedScene;
                             return;
                         }
                         
@@ -650,6 +666,8 @@
                     currentProgress = result.progress;
                     totalNodes = result.totalNodes;
                     currentScenarioType = result.scenario.type;
+                    currentScenarioName = result.scenario.name;
+                    
                     currentBranches = result.branches;
                     
                     // 更新进度条
