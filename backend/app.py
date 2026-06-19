@@ -17,39 +17,46 @@ from scenario_backend.api import ScenarioAPIHandler
 from result_backend import Database as ResultDatabase
 from result_backend.api import ResultAPIHandler
 from micro_assessment.api import MicroAssessmentAPIHandler
+from ai_chat.api import AiChatAPIHandler
+from ai_chat.store import init_ai_chat_database
 
 # 前端静态文件目录（注意目录名中有两个空格）
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "stress" / "stress  test"
 
 
-def make_combined_handler(auth_db: AuthDatabase, scenario_db: ScenarioDatabase, result_db: ResultDatabase) -> type:
+def make_combined_handler(auth_db: AuthDatabase, scenario_db: ScenarioDatabase, result_db: ResultDatabase, chat_db_path: str) -> type:
     """Create a combined handler that routes requests to appropriate backend modules."""
-    
-    class CombinedHandler(ScenarioAPIHandler, AuthAPIHandler, ResultAPIHandler, MicroAssessmentAPIHandler):
+
+    class CombinedHandler(ScenarioAPIHandler, AuthAPIHandler, ResultAPIHandler, MicroAssessmentAPIHandler, AiChatAPIHandler):
         server_version = "StressAppBackend/2.0"
-        
+
         def __init__(self, *args, **kwargs):
             # 先设置数据库属性，然后再调用父类初始化
             self.db = auth_db
             self.scenario_db = scenario_db
             self.auth_db = auth_db
             self.result_db = result_db
+            self.chat_db_path = chat_db_path
             super().__init__(*args, **kwargs)
         
         def do_GET(self) -> None:
             from http import HTTPStatus
-            
+
             path = self._get_path()
             print(f"DEBUG - Received GET request: {self.path} -> parsed path: {path}")
-            
+
             # 服务前端静态文件
             if not path.startswith("/api/"):
                 self._serve_static_file(path)
                 return
-            
+
             if path.startswith("/api/micro-assessment/"):
                 print(f"DEBUG - Routing to MicroAssessmentAPIHandler: {path}")
                 self.do_GET_micro()
+                return
+            if path.startswith("/api/chat/history"):
+                print(f"DEBUG - Routing to AiChatAPIHandler (history): {path}")
+                self.do_GET_chat_history()
                 return
             # API请求路由
             if path.startswith("/api/record"):
@@ -76,6 +83,14 @@ def make_combined_handler(auth_db: AuthDatabase, scenario_db: ScenarioDatabase, 
                 if path.startswith("/api/micro-assessment/"):
                     print("DEBUG - Routing to MicroAssessmentAPIHandler")
                     self.do_POST_micro()
+                    return
+                if path.startswith("/api/chat/greeting"):
+                    print("DEBUG - Routing to AiChatAPIHandler (greeting)")
+                    self.do_POST_chat_greeting()
+                    return
+                if path.startswith("/api/chat"):
+                    print("DEBUG - Routing to AiChatAPIHandler")
+                    self.do_POST_chat()
                     return
                 if path.startswith("/api/record"):
                     print("DEBUG - Routing to ResultAPIHandler")
@@ -180,6 +195,11 @@ def parse_args() -> argparse.Namespace:
         default=str(Path(__file__).resolve().parent / "data" / "result.sqlite3"),
         help="Result SQLite database path",
     )
+    parser.add_argument(
+        "--chat-db",
+        default=str(Path(__file__).resolve().parent / "data" / "chat.sqlite3"),
+        help="Chat SQLite database path",
+    )
     return parser.parse_args()
 
 
@@ -188,20 +208,26 @@ def main() -> None:
     
     auth_database = AuthDatabase(args.auth_db)
     auth_database.initialize()
-    
+
     scenario_database = ScenarioDatabase(args.scenario_db)
     scenario_database.initialize()
-    
+
     result_database = ResultDatabase(args.result_db)
     result_database.initialize()
-    
-    server = ThreadingHTTPServer((args.host, args.port), make_combined_handler(auth_database, scenario_database, result_database))
+
+    # 初始化 AI 对话模块数据库
+    init_ai_chat_database(args.chat_db)
+
+    server = ThreadingHTTPServer(
+        (args.host, args.port),
+        make_combined_handler(auth_database, scenario_database, result_database, args.chat_db)
+    )
     print("=" * 60)
     print("      AI情景化学生压力微评估APP - 服务启动成功")
     print("=" * 60)
     print(f" 前端访问地址: http://{args.host}:{args.port}")
     print(f" 后端API地址: http://{args.host}:{args.port}/api")
-    print(f" 健康检查: http://{args.host}:{args.port}/api/health")
+    print(f" AI对话API:  http://{args.host}:{args.port}/api/chat")
     print(f" 前端目录: {FRONTEND_DIR}")
     print("=" * 60)
     print(" 按 Ctrl+C 停止服务")

@@ -37,7 +37,7 @@ def init_ai_chat_database(db_path):
 
     conn.commit()
     conn.close()
-    print("✅ AI 对话模块表已创建完成（写入 auth.sqlite3）")
+    print("[OK] AI chat database tables created successfully (chat.sqlite3)")
 
 # ======================
 # 缺少的函数，现在加上！

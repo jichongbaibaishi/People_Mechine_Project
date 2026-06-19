@@ -1,3 +1,3 @@
 @echo off
-cd /d "c:\Users\ASUS\Documents\trae_projects\People_Mechine_Project"
-python backend/app.py > server.log 2>&1
+cd /d "D:\ASUS\Desktop\2026\People_Mechine_Project"
+python backend/app.py --port 8000 > server.log 2>&1

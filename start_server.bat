@@ -1,4 +1,4 @@
 @echo off
-cd /d "c:\Users\ASUS\Documents\trae_projects\People_Mechine_Project"
-python backend/app.py
+cd /d "D:\ASUS\Desktop\2026\People_Mechine_Project"
+python backend/app.py --port 8000
 pause
