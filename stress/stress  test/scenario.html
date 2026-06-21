@@ -418,29 +418,44 @@
         let speechStartTime = 0;     // 语音开始时间
         let speechPausedTime = 0;    // 暂停时已播放时间
         
-        // 备用图片列表
-        // 使用内联SVG图形，不需要外部网络
-        const scenarioSVGs = {
+        // 本地图片列表 - 只使用image文件夹中的图片
+        const localImages = {
             classroom: [
-                '<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720"><rect fill="#87CEEB" width="1280" height="360"/><rect fill="#90EE90" y="360" width="1280" height="360"/><rect x="100" y="280" width="1080" height="400" fill="#DEB887"/><rect x="150" y="350" width="200" height="8" fill="#654321"/><rect x="150" y="358" width="50" height="150" fill="#8B4513"/><rect x="300" y="358" width="50" height="150" fill="#8B4513"/><rect x="160" y="370" width="180" height="100" fill="#F5DEB3"/><rect x="400" y="350" width="200" height="8" fill="#654321"/><rect x="400" y="358" width="50" height="150" fill="#8B4513"/><rect x="550" y="358" width="50" height="150" fill="#8B4513"/><rect x="410" y="370" width="180" height="100" fill="#F5DEB3"/><rect x="650" y="350" width="200" height="8" fill="#654321"/><rect x="650" y="358" width="50" height="150" fill="#8B4513"/><rect x="800" y="358" width="50" height="150" fill="#8B4513"/><rect x="660" y="370" width="180" height="100" fill="#F5DEB3"/><rect x="850" y="350" width="200" height="8" fill="#654321"/><rect x="850" y="358" width="50" height="150" fill="#8B4513"/><rect x="1000" y="358" width="50" height="150" fill="#8B4513"/><rect x="860" y="370" width="180" height="100" fill="#F5DEB3"/><rect x="1100" y="350" width="150" height="8" fill="#654321"/><rect x="1100" y="358" width="37" height="150" fill="#8B4513"/><rect x="1213" y="358" width="37" height="150" fill="#8B4513"/><rect x="1110" y="370" width="130" height="100" fill="#F5DEB3"/><rect x="500" y="100" width="280" height="150" fill="#000"/><rect x="505" y="105" width="270" height="140" fill="#006400"/><rect x="520" y="120" width="240" height="40" fill="#FFF" font-size="24" text-anchor="middle" x="640" y="152">好好学习天天向上</rect><circle cx="200" cy="80" r="50" fill="#FFD700"/><rect x="900" y="80" width="150" height="100" fill="#FFE4E1"/></svg>',
-                '<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720"><rect fill="#E0E0E0" width="1280" height="720"/><rect x="100" y="50" width="1080" height="620" fill="#FFF"/><rect x="100" y="50" width="1080" height="30" fill="#424242"/><rect x="130" y="100" width="200" height="10" fill="#E0E0E0"/><rect x="130" y="130" width="200" height="10" fill="#E0E0E0"/><rect x="130" y="160" width="200" height="10" fill="#E0E0E0"/><rect x="130" y="190" width="200" height="10" fill="#E0E0E0"/><rect x="380" y="100" width="400" height="200" fill="#000"/><rect x="385" y="105" width="390" height="190" fill="#2F4F4F"/><circle cx="580" cy="200" r="50" fill="#32CD32"/><rect x="550" y="230" width="60" height="10" fill="#32CD32"/><rect x="400" y="150" width="50" height="30" fill="#FFD700"/><rect x="460" y="150" width="50" height="30" fill="#FF6347"/><rect x="520" y="150" width="50" height="30" fill="#4169E1"/><rect x="700" y="100" width="200" height="10" fill="#E0E0E0"/><rect x="700" y="130" width="200" height="10" fill="#E0E0E0"/><rect x="700" y="160" width="200" height="10" fill="#E0E0E0"/><rect x="700" y="190" width="200" height="10" fill="#E0E0E0"/><circle cx="640" cy="450" r="80" fill="#FFE4B5"/><circle cx="600" cy="430" r="15" fill="#333"/><circle cx="680" cy="430" r="15" fill="#333"/><path d="M620 470 Q640 490 660 470" stroke="#333" stroke-width="3" fill="none"/><rect x="500" y="530" width="280" height="120" fill="#4169E1"/><rect x="550" y="580" width="180" height="50" fill="#FFD700"/></svg>',
-                '<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720"><rect fill="#87CEEB" width="1280" height="360"/><rect fill="#228B22" y="360" width="1280" height="360"/><rect x="200" y="200" width="880" height="480" fill="#F5DEB3"/><rect x="200" y="200" width="880" height="30" fill="#8B4513"/><rect x="300" y="300" width="150" height="180" fill="#87CEEB"/><rect x="300" y="300" width="150" height="60" fill="#98FB98"/><rect x="500" y="300" width="150" height="180" fill="#87CEEB"/><rect x="500" y="300" width="150" height="60" fill="#98FB98"/><rect x="700" y="300" width="150" height="180" fill="#87CEEB"/><rect x="700" y="300" width="150" height="60" fill="#98FB98"/><rect x="900" y="300" width="150" height="180" fill="#87CEEB"/><rect x="900" y="300" width="150" height="60" fill="#98FB98"/><rect x="320" y="400" width="110" height="60" fill="#FFEFD5"/><rect x="520" y="400" width="110" height="60" fill="#FFEFD5"/><rect x="720" y="400" width="110" height="60" fill="#FFEFD5"/><rect x="920" y="400" width="110" height="60" fill="#FFEFD5"/><circle cx="150" cy="100" r="40" fill="#FFD700"/></svg>',
+                '/api/images/scene1.png',
+                '/api/images/scene2.png',
+                '/api/images/scene3.png',
+                '/api/images/scene4.png',
+                '/api/images/scene5.png',
+                '/api/images/scene6.png',
+                '/api/images/scene7.png',
+                '/api/images/scene8.png',
+                '/api/images/scene9.png',
+                '/api/images/scene10.png',
+                '/api/images/scene11.png',
             ],
             exam: [
-                '<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720"><rect fill="#2F4F4F" width="1280" height="720"/><rect x="50" y="50" width="1180" height="620" fill="#1a1a2e"/><rect x="100" y="100" width="300" height="400" fill="#8B4513"/><rect x="110" y="110" width="280" height="380" fill="#2F4F4F"/><rect x="120" y="130" width="260" height="30" fill="#4169E1"/><rect x="120" y="170" width="260" height="30" fill="#4169E1"/><rect x="120" y="210" width="260" height="30" fill="#4169E1"/><rect x="120" y="250" width="260" height="30" fill="#4169E1"/><rect x="120" y="290" width="260" height="30" fill="#4169E1"/><rect x="120" y="330" width="260" height="30" fill="#4169E1"/><rect x="120" y="370" width="260" height="30" fill="#4169E1"/><rect x="500" y="100" width="300" height="400" fill="#8B4513"/><rect x="510" y="110" width="280" height="380" fill="#2F4F4F"/><rect x="520" y="130" width="260" height="30" fill="#808080"/><rect x="520" y="170" width="260" height="30" fill="#808080"/><rect x="520" y="210" width="260" height="30" fill="#808080"/><rect x="520" y="250" width="260" height="30" fill="#808080"/><rect x="520" y="290" width="260" height="30" fill="#808080"/><rect x="520" y="330" width="260" height="30" fill="#808080"/><rect x="520" y="370" width="260" height="30" fill="#808080"/><rect x="900" y="100" width="300" height="400" fill="#8B4513"/><rect x="910" y="110" width="280" height="380" fill="#2F4F4F"/><rect x="920" y="130" width="260" height="30" fill="#4169E1"/><rect x="920" y="170" width="260" height="30" fill="#4169E1"/><rect x="920" y="210" width="260" height="30" fill="#4169E1"/><rect x="920" y="250" width="260" height="30" fill="#4169E1"/><rect x="920" y="290" width="260" height="30" fill="#4169E1"/><rect x="920" y="330" width="260" height="30" fill="#4169E1"/><rect x="920" y="370" width="260" height="30" fill="#4169E1"/><circle cx="640" cy="580" r="50" fill="#FFE4E1"/><rect x="590" y="560" width="100" height="40" fill="#F5DEB3"/><rect x="580" y="590" width="120" height="30" fill="#DEB887"/></svg>',
-                '<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720"><rect fill="#F5F5DC" width="1280" height="720"/><rect x="200" y="200" width="880" height="320" fill="#87CEEB"/><rect x="200" y="520" width="880" height="100" fill="#228B22"/><rect x="300" y="300" width="200" height="150" fill="#FFEFD5"/><rect x="300" y="300" width="200" height="30" fill="#4169E1"/><rect x="320" y="350" width="160" height="80" fill="#FFF"/><rect x="330" y="360" width="60" height="20" fill="#E0E0E0"/><rect x="330" y="390" width="140" height="20" fill="#E0E0E0"/><rect x="330" y="420" width="100" height="20" fill="#E0E0E0"/><rect x="600" y="300" width="200" height="150" fill="#FFEFD5"/><rect x="600" y="300" width="200" height="30" fill="#DC143C"/><rect x="620" y="350" width="160" height="80" fill="#FFF"/><rect x="630" y="360" width="60" height="20" fill="#E0E0E0"/><rect x="630" y="390" width="140" height="20" fill="#E0E0E0"/><rect x="630" y="420" width="100" height="20" fill="#E0E0E0"/><rect x="900" y="300" width="150" height="150" fill="#FFEFD5"/><rect x="900" y="300" width="150" height="30" fill="#FFD700"/><rect x="920" y="350" width="110" height="80" fill="#FFF"/><rect x="930" y="360" width="50" height="20" fill="#E0E0E0"/><rect x="930" y="390" width="90" height="20" fill="#E0E0E0"/><rect x="930" y="420" width="70" height="20" fill="#E0E0E0"/><rect x="400" y="550" width="80" height="50" fill="#8B4513"/><rect x="500" y="550" width="80" height="50" fill="#8B4513"/><rect x="600" y="550" width="80" height="50" fill="#8B4513"/><rect x="700" y="550" width="80" height="50" fill="#8B4513"/><rect x="800" y="550" width="80" height="50" fill="#8B4513"/></svg>',
-                '<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720"><rect fill="#FFFAFA" width="1280" height="720"/><rect x="100" y="100" width="1080" height="520" fill="#FFF" stroke="#E0E0E0"/><rect x="150" y="150" width="400" height="350" fill="#FFF" stroke="#4169E1"/><rect x="180" y="180" width="340" height="280" fill="#FFF"/><rect x="200" y="200" width="300" height="20" fill="#E0E0E0"/><rect x="200" y="230" width="250" height="20" fill="#E0E0E0"/><rect x="200" y="260" width="280" height="20" fill="#E0E0E0"/><rect x="200" y="290" width="220" height="20" fill="#E0E0E0"/><rect x="200" y="320" width="260" height="20" fill="#E0E0E0"/><rect x="200" y="350" width="240" height="20" fill="#E0E0E0"/><rect x="200" y="380" width="270" height="20" fill="#E0E0E0"/><rect x="200" y="410" width="230" height="20" fill="#E0E0E0"/><rect x="600" y="150" width="400" height="350" fill="#FFF" stroke="#DC143C"/><rect x="630" y="180" width="340" height="280" fill="#FFF"/><rect x="650" y="200" width="300" height="20" fill="#DC143C"/><rect x="650" y="230" width="250" height="20" fill="#E0E0E0"/><rect x="650" y="260" width="280" height="20" fill="#E0E0E0"/><rect x="650" y="290" width="220" height="20" fill="#E0E0E0"/><rect x="650" y="320" width="260" height="20" fill="#E0E0E0"/><rect x="650" y="350" width="240" height="20" fill="#E0E0E0"/><rect x="650" y="380" width="270" height="20" fill="#E0E0E0"/><rect x="650" y="410" width="230" height="20" fill="#E0E0E0"/><rect x="300" y="520" width="100" height="40" fill="#4169E1"/><rect x="700" y="520" width="100" height="40" fill="#DC143C"/></svg>',
+                '/api/images/scede1.png',
+                '/api/images/scede2.png',
+                '/api/images/scede3.png',
+                '/api/images/scede4.png',
+                '/api/images/scede5.png',
+                '/api/images/scede6.png',
+                '/api/images/scede7.png',
+                '/api/images/scede8.png',
+                '/api/images/scede9.png',
+                '/api/images/scede10.png',
+                '/api/images/scede11.png',
             ],
             default: [
-                '<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720"><rect fill="#E0E0E0" width="1280" height="720"/><circle cx="640" cy="360" r="200" fill="#4169E1"/><circle cx="640" cy="360" r="150" fill="#87CEEB"/><circle cx="640" cy="360" r="100" fill="#B0E0E6"/><text x="640" y="375" fill="#FFF" font-size="36" text-anchor="middle">学习场景</text></svg>',
-                '<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720"><rect fill="#F5F5F5" width="1280" height="720"/><rect x="300" y="200" width="680" height="320" fill="#FFF" stroke="#E0E0E0"/><rect x="400" y="250" width="480" height="80" fill="#4169E1"/><text x="640" y="305" fill="#FFF" font-size="28" text-anchor="middle">AI情景体验</text><rect x="400" y="380" width="480" height="120" fill="#FFF" stroke="#E0E0E0"/><text x="640" y="455" fill="#666" font-size="20" text-anchor="middle">沉浸式学习体验平台</text></svg>',
+                '/api/images/scene1.png',
+                '/api/images/scede1.png',
             ]
         };
         
-        // 获取场景SVG
+        // 获取备用图片 - 只使用本地图片
         function getFallbackImage(scenarioType) {
-            const svgs = scenarioSVGs[scenarioType] || scenarioSVGs.default;
-            return 'data:image/svg+xml,' + encodeURIComponent(svgs[Math.floor(Math.random() * svgs.length)]);
+            const images = localImages[scenarioType] || localImages.default;
+            return images[Math.floor(Math.random() * images.length)];
         }
         
         // 获取请求头
@@ -594,30 +609,32 @@
             }
             
             // 更新图片
-            const scenarioImageEl = document.getElementById('scenarioImage');
-            const imgElement = document.getElementById('scenarioImgElement');
-            
-            // 设置默认背景色
-            scenarioImageEl.style.backgroundColor = '#f5f5f5';
-            imgElement.style.display = 'none';
-            imgElement.src = '';
-            
-            // 直接使用备用图片，确保图片能正常显示
+        const scenarioImageEl = document.getElementById('scenarioImage');
+        const imgElement = document.getElementById('scenarioImgElement');
+        
+        // 设置默认背景色
+        scenarioImageEl.style.backgroundColor = '#f5f5f5';
+        imgElement.style.display = 'none';
+        imgElement.src = '';
+        
+        // 使用后端返回的图片URL，如果没有则使用备用图片
+        const imageUrl = node.imageUrl || getFallbackImage(currentScenarioType);
+        console.log("DEBUG - Using image:", imageUrl);
+        
+        // 使用img标签直接加载图片
+        imgElement.onload = function() {
+            console.log("DEBUG - Image loaded successfully");
+            imgElement.style.display = 'block';
+            scenarioImageEl.style.backgroundColor = 'transparent';
+        };
+        imgElement.onerror = function(event) {
+            console.error('Image load failed:', event);
+            // 如果图片加载失败，尝试使用备用图片
             const fallbackUrl = getFallbackImage(currentScenarioType);
-            console.log("DEBUG - Using fallback image:", fallbackUrl);
-            
-            // 使用img标签直接加载图片
-            imgElement.onload = function() {
-                console.log("DEBUG - Image loaded successfully");
-                imgElement.style.display = 'block';
-                scenarioImageEl.style.backgroundColor = 'transparent';
-            };
-            imgElement.onerror = function(event) {
-                console.error('Image load failed:', event);
-                // 如果备用图片也失败，显示一个简单的背景图案
-                scenarioImageEl.style.background = '#f5f5f5 url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Cg fill=\'%23cccccc\' fill-opacity=\'0.4\'%3E%3Cpath d=\'M0 20L20 0L40 20L20 40Z\'/%3E%3C/g%3E%3C/svg%3E") repeat';
-            };
+            console.log("DEBUG - Falling back to:", fallbackUrl);
             imgElement.src = fallbackUrl;
+        };
+        imgElement.src = imageUrl;
             
             // 更新内容
             document.getElementById('scenarioContent').textContent = node.content;

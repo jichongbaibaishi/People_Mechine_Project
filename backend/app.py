@@ -23,6 +23,9 @@ from ai_chat.store import init_ai_chat_database
 # 前端静态文件目录（注意目录名中有两个空格）
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "stress" / "stress  test"
 
+# 场景图片目录
+IMAGE_DIR = Path(__file__).resolve().parent / "image"
+
 
 def make_combined_handler(auth_db: AuthDatabase, scenario_db: ScenarioDatabase, result_db: ResultDatabase, chat_db_path: str) -> type:
     """Create a combined handler that routes requests to appropriate backend modules."""
@@ -44,6 +47,11 @@ def make_combined_handler(auth_db: AuthDatabase, scenario_db: ScenarioDatabase, 
 
             path = self._get_path()
             print(f"DEBUG - Received GET request: {self.path} -> parsed path: {path}")
+
+            # 服务场景图片
+            if path.startswith("/api/images/"):
+                self._serve_image_file(path)
+                return
 
             # 服务前端静态文件
             if not path.startswith("/api/"):
@@ -154,6 +162,45 @@ def make_combined_handler(auth_db: AuthDatabase, scenario_db: ScenarioDatabase, 
                 mime_type, _ = mimetypes.guess_type(str(file_path))
                 if mime_type is None:
                     mime_type = "application/octet-stream"
+                
+                self.send_response(HTTPStatus.OK)
+                self.send_header("Content-Type", mime_type)
+                self.send_header("Content-Length", str(len(content)))
+                self._send_cors_headers()
+                self.end_headers()
+                self.wfile.write(content)
+            except Exception as e:
+                self._send_error(HTTPStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", str(e))
+        
+        def _serve_image_file(self, path: str) -> None:
+            """Serve scenario images from the image directory."""
+            from http import HTTPStatus
+            
+            # 提取文件名
+            image_name = path.split("/")[-1]
+            
+            # 安全检查：防止路径遍历
+            if ".." in image_name or "~" in image_name:
+                self._send_error(HTTPStatus.FORBIDDEN, "FORBIDDEN", "Invalid path")
+                return
+            
+            # 构建文件路径
+            file_path = IMAGE_DIR / unquote(image_name)
+            
+            # 检查文件是否存在
+            if not file_path.exists() or not file_path.is_file():
+                self._send_error(HTTPStatus.NOT_FOUND, "NOT_FOUND", "Image not found")
+                return
+            
+            # 读取并返回文件
+            try:
+                with open(file_path, "rb") as f:
+                    content = f.read()
+                
+                # 获取MIME类型
+                mime_type, _ = mimetypes.guess_type(str(file_path))
+                if mime_type is None:
+                    mime_type = "image/png"
                 
                 self.send_response(HTTPStatus.OK)
                 self.send_header("Content-Type", mime_type)

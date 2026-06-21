@@ -431,12 +431,84 @@ AUDIO_SCRIPTS = {
 }
 
 
+# 场景内容与图片的映射
+# 课堂发言场景图片映射
+CLASSROOM_IMAGE_MAP = [
+    # opening - scene1.png, scene2.png
+    {
+        "keywords": ["老师走进教室", "宣布今天要进行讨论", "不太熟悉的领域", "心跳开始加速"],
+        "images": ["scene1.png"]
+    },
+    {
+        "keywords": ["分成小组", "分到了陌生的小组", "其他人都积极发言", "有点紧张"],
+        "images": ["scene2.png"]
+    },
+    # development - scene3.png, scene4.png, scene5.png
+    {
+        "keywords": ["分享了一个很好的观点", "轮到你发言了", "老师关注", "期待听到你们的想法", "观点碰撞", "时间压力", "达成一致意见", "展示准备", "开场白"],
+        "images": ["scene3.png", "scene4.png", "scene5.png"]
+    },
+    # climax - scene6.png, scene7.png, scene8.png
+    {
+        "keywords": ["所有目光都转向了你", "别紧张说出你的想法", "站起来准备发言", "突然发现", "更加紧张", "向你投来鼓励的眼神", "深吸一口气"],
+        "images": ["scene6.png", "scene7.png", "scene8.png"]
+    },
+    # ending - scene9.png, scene10.png, scene11.png
+    {
+        "keywords": ["完成了发言", "微笑着说", "非常好的观点", "纷纷鼓掌", "勇敢尝试", "勇于尝试就是进步", "需要改进", "指出了几个可以改进的地方"],
+        "images": ["scene9.png", "scene10.png", "scene11.png"]
+    },
+]
+
+# 考试DDL场景图片映射
+EXAM_IMAGE_MAP = [
+    # opening - scede1.png, scede2.png
+    {
+        "keywords": ["距离", "还有", "天", "堆积如山的复习资料", "室友们都在紧张复习"],
+        "images": ["scede1.png"]
+    },
+    {
+        "keywords": ["坐在", "开始复习", "发现", "焦虑感开始上升"],
+        "images": ["scede2.png"]
+    },
+    # development - scede3.png, scede4.png, scede5.png
+    {
+        "keywords": ["时间过去了", "小时", "复习进度", "难以集中注意力", "发来消息", "已经复习完", "感觉", "身体警报", "休息还是继续", "凌晨", "深夜奋战", "模拟测试", "结果"],
+        "images": ["scede3.png", "scede4.png", "scede5.png"]
+    },
+    # climax - scede6.png, scede7.png, scede8.png
+    {
+        "keywords": ["考试前夜", "难以入睡", "走进考场", "深吸一口气", "拿到试卷", "快速浏览", "时间看起来很紧张"],
+        "images": ["scede6.png", "scede7.png", "scede8.png"]
+    },
+    # ending - scede9.png, scede10.png, scede11.png
+    {
+        "keywords": ["考试结束铃声响起", "自信地交上试卷", "尽力而为", "没有把握", "经验教训", "下次考试前", "提前做好准备"],
+        "images": ["scede9.png", "scede10.png", "scede11.png"]
+    },
+]
+
+
 class AIScenarioGenerator:
     """AI-powered generator for scenario content."""
 
     def __init__(self):
         self.scene_counter = 0
         self.max_scenes = 5
+        
+    def _get_matching_image(self, content: str, scenario_type: str) -> str:
+        """根据场景内容匹配对应的图片"""
+        image_map = CLASSROOM_IMAGE_MAP if scenario_type == "classroom" else EXAM_IMAGE_MAP
+        
+        for entry in image_map:
+            for keyword in entry["keywords"]:
+                if keyword in content:
+                    # 随机选择一个匹配的图片
+                    image_name = random.choice(entry["images"])
+                    return f"/api/images/{image_name}"
+        
+        # 如果没有匹配到，返回默认图片
+        return self._generate_fallback_image(scenario_type)
 
     def _map_scenario_type(self, scenario_type: str) -> str:
         """将数据库中的场景类型映射到内部类型"""
@@ -505,9 +577,9 @@ class AIScenarioGenerator:
         # 确定场景类型
         scenario_type = "classroom" if "老师" in content or "同学" in content else "exam"
         
-        # 智能生成图片提示词和URL
-        image_prompt = self._generate_image_prompt(content, scenario_type, node_type)
-        image_url = self._generate_image_url(image_prompt, scenario_type)
+        # 使用本地图片映射，根据内容匹配图片
+        image_url = self._get_matching_image(content, scenario_type)
+        image_prompt = f"{scenario_type} {node_type} scene"
         
         # 生成音频脚本
         audio_script = self._generate_audio(scenario_type, node_type)
@@ -654,6 +726,40 @@ class AIScenarioGenerator:
         
         # 根据场景类型选择图片
         images = local_images.get(scenario_type, local_images["classroom"])
+        return random.choice(images)
+    
+    def _generate_fallback_image(self, scenario_type: str) -> str:
+        """生成备用图片URL - 只使用本地图片"""
+        # 使用本地image文件夹中的图片作为备用
+        fallback_images = {
+            "classroom": [
+                "/api/images/scene1.png",
+                "/api/images/scene2.png",
+                "/api/images/scene3.png",
+                "/api/images/scene4.png",
+                "/api/images/scene5.png",
+                "/api/images/scene6.png",
+                "/api/images/scene7.png",
+                "/api/images/scene8.png",
+                "/api/images/scene9.png",
+                "/api/images/scene10.png",
+                "/api/images/scene11.png",
+            ],
+            "exam": [
+                "/api/images/scede1.png",
+                "/api/images/scede2.png",
+                "/api/images/scede3.png",
+                "/api/images/scede4.png",
+                "/api/images/scede5.png",
+                "/api/images/scede6.png",
+                "/api/images/scede7.png",
+                "/api/images/scede8.png",
+                "/api/images/scede9.png",
+                "/api/images/scede10.png",
+                "/api/images/scede11.png",
+            ]
+        }
+        images = fallback_images.get(scenario_type, fallback_images["classroom"])
         return random.choice(images)
 
     def _generate_audio(self, scenario_type: str, node_type: str) -> Dict[str, Any]:
