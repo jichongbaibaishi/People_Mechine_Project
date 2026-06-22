@@ -481,15 +481,7 @@
                         const encodedScene = encodeURIComponent(sceneText);
                         const scenarioType = currentScenarioType || 'classroom';
 
-                        // 保存记录到本地存储
-                        window.localStorageManager.saveRecord({
-                            sessionId: currentSessionId,
-                            scenarioType: scenarioType,
-                            scenarioName: currentScenarioName,
-                            choices: selectedChoices,
-                            scene: sceneText
-                        });
-
+                        // 不再自动保存，只在 save-modal.html 用户点击"保存并查看"时才保存
                         window.location.href = 'assessment.html?sessionId=' + currentSessionId + '&scenario=' + scenarioType + '&scene=' + encodedScene;
                         return;
                     }
