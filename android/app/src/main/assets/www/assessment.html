@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>场景内嵌微评估答题页</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+        
+        :root {
+            --primary-color: #8a7bff;
+            --secondary-color: #b3a7ff;
+            --background-color: #f8f9fa;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --border-radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: rgba(0, 0, 0, 0.5);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            align-items: flex-end;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(100%); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .assessment-container {
+            background-color: white;
+            border-radius: 20px 20px 0 0;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            padding: 24px;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        
+        .header .title {
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        
+        .header .progress {
+            font-size: 14px;
+            color: var(--text-secondary);
+            background: var(--background-color);
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+        
+        .scenario-review {
+            background-color: var(--background-color);
+            border-radius: var(--border-radius);
+            padding: 16px;
+            margin-bottom: 24px;
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .scenario-review p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin: 0;
+        }
+        
+        .question-card {
+            background-color: white;
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow);
+        }
+        
+        .question-dimension {
+            font-size: 12px;
+            color: var(--primary-color);
+            font-weight: 500;
+            margin-bottom: 8px;
+            background: rgba(138, 123, 255, 0.08);
+            display: inline-block;
+            padding: 2px 12px;
+            border-radius: 20px;
+        }
+        
+        .question-text {
+            font-size: 16px;
+            color: var(--text-primary);
+            line-height: 1.6;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        
+        .slider-container {
+            padding: 8px 0;
+        }
+        
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            outline: none;
+            background: linear-gradient(to right, #ff6b6b, #feca57, #48dbfb);
+            transition: background 0.3s ease;
+            cursor: pointer;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: white;
+            border: 3px solid var(--primary-color);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(138, 123, 255, 0.3);
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: white;
+            border: 3px solid var(--primary-color);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            cursor: pointer;
+        }
+        
+        .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 12px;
+            padding: 0 4px;
+        }
+        
+        .slider-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        .slider-label.active {
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+        
+        .slider-value-display {
+            text-align: center;
+            font-size: 14px;
+            color: var(--primary-color);
+            font-weight: 500;
+            margin-top: 4px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .nav-button {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: var(--border-radius);
+            background-color: white;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-button:hover:not(:disabled) {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+        
+        .nav-button:disabled {
+            border-color: #e0e0e0;
+            color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        .nav-button.primary {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        
+        .nav-button.primary:hover:not(:disabled) {
+            background-color: #7a6be6;
+            border-color: #7a6be6;
+        }
+        
+        .nav-button.primary:disabled {
+            background-color: #cccccc;
+            border-color: #cccccc;
+        }
+        
+        .exit-button {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: var(--border-radius);
+            background-color: transparent;
+            font-size: 13px;
+            color: #999999;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .exit-button:hover {
+            color: #ff6b6b;
+            background-color: rgba(255, 107, 107, 0.05);
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px 0;
+            color: var(--text-secondary);
+        }
+        .loading .fa {
+            font-size: 32px;
+            margin-bottom: 12px;
+            color: var(--primary-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="assessment-container" id="app">
+        <!-- 加载状态 -->
+        <div id="loadingState" class="loading">
+            <div><i class="fa fa-spinner fa-spin"></i></div>
+            <div>加载题目中...</div>
+        </div>
+
+        <!-- 答题内容（初始隐藏） -->
+        <div id="contentState" style="display: none;">
+            <!-- 顶部区：场景回顾 + 答题进度 -->
+            <div class="header">
+                <div class="title">情景微评估</div>
+                <div class="progress" id="progressDisplay">1/4</div>
+            </div>
+            
+            <div class="scenario-review">
+                <p id="scenarioText">场景回顾：</p>
+            </div>
+            
+            <!-- 中部答题区 -->
+            <div class="question-card">
+                <div class="question-dimension" id="dimensionTag">维度：压力水平</div>
+                <div class="question-text" id="questionText">加载题目中...</div>
+                
+                <div class="slider-container">
+                    <input type="range" id="slider" min="1" max="5" step="1" value="3">
+                    <div class="slider-labels">
+                        <span class="slider-label" id="labelLeft">完全不符合</span>
+                        <span class="slider-label" id="labelCenter">中性</span>
+                        <span class="slider-label" id="labelRight">完全符合</span>
+                    </div>
+                    <div class="slider-value-display" id="valueDisplay">当前：不确定 (3)</div>
+                </div>
+            </div>
+            
+            <!-- 底部按钮区 -->
+            <div class="button-group">
+                <button class="nav-button" id="prevBtn" disabled>上一题</button>
+                <button class="nav-button primary" id="nextBtn">下一题</button>
+            </div>
+            
+            <button class="exit-button" onclick="exitAssessment()">退出答题</button>
+        </div>
+    </div>
+    
+    <script src="local_engine.js"></script>
+    <script src="local_storage.js"></script>
+    <script>
+        // ============================================================
+        // 核心配置
+        // ============================================================
+        const TOTAL_QUESTIONS = 4;
+        let currentIndex = 0;
+        let questions = [];
+        let answers = [];
+        let isSubmitting = false;
+
+        // DOM 引用
+        const $ = id => document.getElementById(id);
+        const loadingState = $('loadingState');
+        const contentState = $('contentState');
+        const progressDisplay = $('progressDisplay');
+        const scenarioText = $('scenarioText');
+        const dimensionTag = $('dimensionTag');
+        const questionText = $('questionText');
+        const slider = $('slider');
+        const valueDisplay = $('valueDisplay');
+        const prevBtn = $('prevBtn');
+        const nextBtn = $('nextBtn');
+        const labelLeft = $('labelLeft');
+        const labelCenter = $('labelCenter');
+        const labelRight = $('labelRight');
+
+        // 维度中文映射
+        const DIMENSION_MAP = {
+            'pressure': '压力水平',
+            'avoidance': '回避倾向',
+            'self_efficacy': '自我效能',
+            'coping': '应对方式',
+            'stress_level': '压力水平',
+            'coping_ability': '应对能力',
+            'association': '联想',
+            'time_management': '时间管理',
+            'coping_strategy': '应对策略'
+        };
+
+        // 分数标签映射
+        const SCORE_LABELS = {
+            1: '完全不符合',
+            2: '比较不符合',
+            3: '不确定',
+            4: '比较符合',
+            5: '完全符合'
+        };
+
+        // ============================================================
+        // 1. 获取 URL 参数
+        // ============================================================
+        const urlParams = new URLSearchParams(window.location.search);
+        const scenario = urlParams.get('scenario') || 'default';
+        let sceneText = urlParams.get('scene');
+
+        // 如果 URL 中没有 scene 参数，根据 scenario 自动生成默认文案
+        if (!sceneText) {
+            if (scenario === 'social') {
+                sceneText = '你刚刚完成了课堂发言压力场景的沉浸式体验。面对老师的提问和同学们的目光，你经历了紧张与挑战。';
+            } else if (scenario === 'academic') {
+                sceneText = '你刚刚完成了考试DDL学业压力场景的沉浸式体验。在复习备考的过程中，你面对了时间压力和学业挑战。';
+            } else {
+                sceneText = '老师突然点名让你回答问题，你感到心跳加速，手心出汗。';
+            }
+        }
+        // 设置场景回顾文案
+        scenarioText.textContent = `场景回顾：${sceneText}`;
+
+        // ============================================================
+        // 2. 从本地引擎获取题目
+        // ============================================================
+        async function loadQuestions() {
+            try {
+                // 使用本地引擎生成题目
+                const result = window.localEngine.getMicroAssessment(scenario);
+                
+                if (result.code === 200 && result.data && result.data.questions) {
+                    questions = result.data.questions.map((q, idx) => ({
+                        dimension: q.type || 'dimension_' + idx,
+                        text: q.question,
+                        options: q.options
+                    }));
+                    answers = questions.map(q => ({
+                        dimension: q.dimension,
+                        score: 3
+                    }));
+                    loadingState.style.display = 'none';
+                    contentState.style.display = 'block';
+                    renderQuestion(0);
+                } else {
+                    throw new Error(result.msg || '获取题目失败');
+                }
+            } catch (error) {
+                console.error('加载题目失败:', error);
+                loadingState.innerHTML = `
+                    <div><i class="fa fa-exclamation-circle" style="color:#ff6b6b;"></i></div>
+                    <div>加载失败，请刷新重试</div>
+                    <button onclick="location.reload()" style="margin-top:12px;padding:8px 24px;border-radius:8px;border:1px solid #8a7bff;background:white;color:#8a7bff;cursor:pointer;">重新加载</button>
+                `;
+            }
+        }
+
+        // ============================================================
+        // 3. 渲染题目
+        // ============================================================
+        function renderQuestion(index) {
+            const q = questions[index];
+            if (!q) return;
+
+            progressDisplay.textContent = `${index + 1}/${questions.length}`;
+            const dimName = DIMENSION_MAP[q.dimension] || q.dimension;
+            dimensionTag.textContent = `维度：${dimName}`;
+            questionText.textContent = q.text;
+
+            const existing = answers.find(a => a.dimension === q.dimension);
+            const score = existing ? existing.score : 3;
+            slider.value = score;
+            updateSliderDisplay(score);
+
+            prevBtn.disabled = index === 0;
+            nextBtn.textContent = index === questions.length - 1 ? '提交' : '下一题';
+        }
+
+        // ============================================================
+        // 4. 滑动条事件
+        // ============================================================
+        function updateSliderDisplay(score) {
+            const label = SCORE_LABELS[score] || '不确定';
+            valueDisplay.textContent = `当前：${label} (${score})`;
+            [labelLeft, labelCenter, labelRight].forEach(el => el.classList.remove('active'));
+            if (score <= 2) labelLeft.classList.add('active');
+            else if (score === 3) labelCenter.classList.add('active');
+            else if (score >= 4) labelRight.classList.add('active');
+        }
+
+        slider.addEventListener('input', function() {
+            const score = parseInt(this.value);
+            const dim = questions[currentIndex].dimension;
+            const found = answers.find(a => a.dimension === dim);
+            if (found) found.score = score;
+            updateSliderDisplay(score);
+        });
+
+        // ============================================================
+        // 5. 导航
+        // ============================================================
+        function prevQuestion() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                renderQuestion(currentIndex);
+            }
+        }
+
+        function nextQuestion() {
+            if (currentIndex === questions.length - 1) {
+                submitAnswers();
+                return;
+            }
+            if (currentIndex < questions.length - 1) {
+                currentIndex++;
+                renderQuestion(currentIndex);
+            }
+        }
+
+        // ============================================================
+        // 6. 提交（使用本地引擎计算结果）
+        // ============================================================
+        async function submitAnswers() {
+            if (isSubmitting) return;
+            
+            const answeredDims = answers.map(a => a.dimension);
+            const allDims = questions.map(q => q.dimension);
+            const missing = allDims.filter(d => !answeredDims.includes(d));
+            if (missing.length > 0) {
+                alert('请完成所有题目再提交');
+                return;
+            }
+
+            isSubmitting = true;
+            nextBtn.disabled = true;
+            nextBtn.textContent = '提交中...';
+
+            try {
+                // 使用本地引擎计算结果
+                const result = window.localEngine.generateResult(answers, scenario);
+                
+                if (result.code === 200) {
+                    // result.data 已包含 dimensions（pressure/avoidance/self_efficacy/coping，score 1-5）
+                    // 转换为 result.html/save-modal.html 期望的格式
+                    const dims = result.data.dimensions || {};
+                    const formattedData = {
+                        comprehensive_risk: {
+                            index: result.data.score || 0,
+                            level: result.data.level || '未知'
+                        },
+                        suggestions: result.data.suggestions || [],
+                        dimensions: {
+                            pressure: dims.pressure || { score: 3 },
+                            avoidance: dims.avoidance || { score: 3 },
+                            self_efficacy: dims.self_efficacy || { score: 3 },
+                            coping: dims.coping || { score: 3 }
+                        },
+                        scenario: scenario,
+                        timestamp: new Date().toISOString()
+                    };
+
+                    localStorage.setItem('assessmentResult', JSON.stringify(formattedData));
+                    window.location.href = './save-modal.html';
+                } else {
+                    alert('提交失败：' + (result.msg || '未知错误'));
+                    isSubmitting = false;
+                    nextBtn.disabled = false;
+                    nextBtn.textContent = currentIndex === questions.length - 1 ? '提交' : '下一题';
+                }
+            } catch (error) {
+                console.error('提交失败:', error);
+                alert('提交出错，请重试');
+                isSubmitting = false;
+                nextBtn.disabled = false;
+                nextBtn.textContent = currentIndex === questions.length - 1 ? '提交' : '下一题';
+            }
+        }
+
+        // ============================================================
+        // 7. 退出
+        // ============================================================
+        function exitAssessment() {
+            if (confirm('确定要退出答题吗？进度将不会保存。')) {
+                window.location.href = './scenario.html';
+            }
+        }
+
+        // ============================================================
+        // 8. 键盘支持
+        // ============================================================
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowLeft' && !prevBtn.disabled) {
+                e.preventDefault();
+                prevQuestion();
+            } else if ((e.key === 'ArrowRight' || e.key === 'Enter') && !nextBtn.disabled) {
+                e.preventDefault();
+                nextQuestion();
+            }
+        });
+
+        // ============================================================
+        // 9. 绑定事件并启动
+        // ============================================================
+        prevBtn.addEventListener('click', prevQuestion);
+        nextBtn.addEventListener('click', nextQuestion);
+
+        // 加载题目
+        loadQuestions();
+
+        // 暴露全局函数（供 HTML onclick 使用）
+        window.prevQuestion = prevQuestion;
+        window.nextQuestion = nextQuestion;
+        window.exitAssessment = exitAssessment;
+    </script>
+</body>
+</html>

@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 沉浸式情景体验主页面</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+        
+        :root {
+            --primary-color: #8a7bff;
+            --secondary-color: #b3a7ff;
+            --background-color: #f8f9fa;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --border-radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: var(--background-color);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        
+        
+        .header {
+            height: 44px;
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .header .back {
+            font-size: 20px;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+        
+        .header .title {
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        
+        .header .progress {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .progress-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #e0e0e0;
+        }
+        
+        .progress-dot.active {
+            background-color: var(--primary-color);
+        }
+        
+        .content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        .scenario-image {
+            width: 100%;
+            height: 200px;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            background-color: #f5f5f5;
+        }
+        
+        .scenario-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .scenario-text {
+            background-color: white;
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+        }
+        
+        .scenario-text p {
+            font-size: 16px;
+            color: var(--text-primary);
+            line-height: 1.6;
+            margin: 0;
+        }
+        
+        .audio-controls {
+            background-color: white;
+            border-radius: var(--border-radius);
+            padding: 16px;
+            margin-bottom: 32px;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .audio-info {
+            flex: 1;
+            margin-left: 16px;
+        }
+        
+        .audio-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+        
+        .audio-progress {
+            width: 100%;
+            height: 4px;
+            background-color: #e0e0e0;
+            border-radius: 2px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        
+        .audio-progress-bar {
+            width: 0%;
+            height: 100%;
+            background-color: var(--primary-color);
+            transition: width 0.1s linear;
+        }
+        
+        .audio-buttons {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .audio-button {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .audio-button:hover {
+            background-color: #7a6bff;
+            transform: scale(1.1);
+        }
+        
+        .interaction-area {
+            background-color: white;
+            border-radius: var(--border-radius);
+            padding: 24px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+        }
+        
+        .interaction-title {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        
+        .interaction-options {
+            display: flex;
+            gap: 16px;
+        }
+        
+        .option {
+            flex: 1;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            border: 2px solid #e0e0e0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        
+        .option:hover {
+            border-color: var(--primary-color);
+            background-color: rgba(138, 123, 255, 0.05);
+        }
+        
+        .option.active {
+            border-color: var(--primary-color);
+            background-color: rgba(138, 123, 255, 0.1);
+        }
+        
+        .option-text {
+            font-size: 14px;
+            color: var(--text-primary);
+            line-height: 1.4;
+        }
+        
+        .hint {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-align: center;
+            margin-top: 16px;
+        }
+        
+        .next-button {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .next-button:hover:not(:disabled) {
+            background-color: #7a6bff;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+        
+        .next-button:disabled {
+            background-color: #e0e0e0;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(138, 123, 255, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(138, 123, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(138, 123, 255, 0); }
+        }
+        
+        .pulse { animation: pulse 2s infinite; }
+        
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <!-- 加载遮罩 -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">正在生成情景内容...</div>
+    </div>
+    
+    
+    <!-- 顶部导航栏 -->
+    <div class="header">
+        <div class="back" onclick="goBack()"><i class="fa fa-arrow-left"></i></div>
+        <div class="title" id="scenarioTitle">课堂发言压力场景</div>
+        <div class="progress" id="progressBar">
+            <div class="progress-dot active"></div>
+            <div class="progress-dot"></div>
+            <div class="progress-dot"></div>
+            <div class="progress-dot"></div>
+            <div class="progress-dot"></div>
+        </div>
+    </div>
+    
+    <!-- 中部核心情景展示区 -->
+    <div class="content">
+        <div class="scenario-image" id="scenarioImage">
+            <img id="scenarioImgElement" src="" alt="场景图片" />
+        </div>
+        
+        <div class="scenario-text">
+            <p id="scenarioContent">加载中...</p>
+        </div>
+        
+        <div class="audio-controls">
+            <div class="audio-button" id="playButton">
+                <i class="fa fa-play"></i>
+            </div>
+            <div class="audio-info">
+                <div class="audio-title">场景音频</div>
+                <div class="audio-progress" id="audioProgress">
+                    <div class="audio-progress-bar" id="audioProgressBar"></div>
+                </div>
+            </div>
+            <div class="audio-buttons">
+                <div class="audio-button" style="background-color: #f0f0f0; color: var(--text-secondary);" id="prevButton">
+                    <i class="fa fa-step-backward"></i>
+                </div>
+                <div class="audio-button" style="background-color: #f0f0f0; color: var(--text-secondary);" id="nextAudioButton">
+                    <i class="fa fa-step-forward"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="interaction-area">
+            <div class="interaction-title">滑动选择你的真实反应</div>
+            <div class="interaction-options" id="interactionOptions">
+                <div class="option" id="optionA" onclick="selectOption('a')">
+                    <div class="option-text" id="optionAText">选项A</div>
+                </div>
+                <div class="option" id="optionB" onclick="selectOption('b')">
+                    <div class="option-text" id="optionBText">选项B</div>
+                </div>
+            </div>
+            <div class="hint">点击选择你的反应倾向</div>
+        </div>
+        
+        <button class="next-button" id="nextButton" disabled onclick="nextStep()">
+            <span id="nextButtonText">确认选择</span>
+        </button>
+    </div>
+    
+    <script src="local_engine.js"></script>
+    <script src="local_storage.js"></script>
+    <script>
+        // 全局状态
+        let selectedOption = null;
+        let currentSessionId = null;
+        let currentProgress = 1;
+        let totalNodes = 5;
+        let currentScenarioType = "";
+        let currentScenarioName = "";
+        let currentBranches = [];
+        let allNodes = [];
+        let selectedChoices = [];
+        let audioContext = null;
+        let audioSource = null;
+        let isPlaying = false;
+        let audioDuration = 0;
+        let audioCurrentTime = 0;
+        let audioInterval = null;
+        let speechUtterance = null;
+        let speechStartTime = 0;
+        let speechPausedTime = 0;
+        
+        // 获取请求头
+        function getHeaders() {
+            const headers = { "Content-Type": "application/json" };
+            const token = localStorage.getItem("token");
+            if (token) {
+                headers["Authorization"] = "Bearer " + token;
+            } else {
+                headers["Anonymous-ID"] = getAnonymousId();
+            }
+            return headers;
+        }
+        
+        // 获取或创建匿名ID
+        function getAnonymousId() {
+            let id = localStorage.getItem("anonymous_id");
+            if (!id) {
+                id = "anon_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem("anonymous_id", id);
+            }
+            return id;
+        }
+        
+        // 返回首页
+        function goBack() {
+            if (confirm("确定要退出场景体验吗？")) {
+                window.location.href = 'home.html';
+            }
+        }
+        
+        // 选择选项
+        function selectOption(option) {
+            selectedOption = option;
+            
+            document.querySelectorAll('.option').forEach(el => el.classList.remove('active'));
+            document.getElementById('option' + option.toUpperCase()).classList.add('active');
+            
+            document.getElementById('nextButton').disabled = false;
+        }
+        
+        // 下一步 - 使用本地引擎
+        async function nextStep() {
+            console.log("DEBUG - nextStep called");
+            console.log("DEBUG - selectedOption:", selectedOption);
+
+            if (!selectedOption) {
+                console.log("DEBUG - selectedOption is empty");
+                return;
+            }
+
+            // 停止当前音频播放
+            stopAudio();
+
+            document.getElementById('nextButton').disabled = true;
+            document.getElementById('loadingOverlay').style.display = 'flex';
+
+            try {
+                const branchIndex = selectedOption === 'a' ? 0 : 1;
+                const choice = currentBranches[branchIndex] || { text: selectedOption === 'a' ? '选项A' : '选项B', stressLevel: 'medium' };
+                selectedChoices.push(choice);
+
+                console.log("DEBUG - choice:", choice);
+                console.log("DEBUG - currentProgress:", currentProgress);
+
+                // 使用本地引擎获取下一个节点
+                const data = window.localEngine.makeChoice(
+                    currentSessionId, branchIndex, allNodes, currentProgress
+                );
+
+                if (data.code === 200) {
+                    const result = data.data;
+                    console.log("DEBUG - Result from local engine:", result);
+
+                    // 场景完成，跳转到评估页
+                    if (result.isComplete) {
+                        console.log("DEBUG - Scenario completed, redirecting to assessment");
+
+                        let sceneText = '';
+                        if (currentScenarioType === 'classroom') {
+                            sceneText = '你刚刚完成了课堂发言压力场景的沉浸式体验。面对老师的提问和同学们的目光，你经历了紧张与挑战。';
+                        } else if (currentScenarioType === 'exam') {
+                            sceneText = '你刚刚完成了考试DDL学业压力场景的沉浸式体验。在复习备考的过程中，你面对了时间压力和学业挑战。';
+                        } else {
+                            sceneText = '你刚刚完成了一段压力情景体验。';
+                        }
+
+                        const encodedScene = encodeURIComponent(sceneText);
+                        const scenarioType = currentScenarioType || 'classroom';
+
+                        // 保存记录到本地存储
+                        window.localStorageManager.saveRecord({
+                            sessionId: currentSessionId,
+                            scenarioType: scenarioType,
+                            scenarioName: currentScenarioName,
+                            choices: selectedChoices,
+                            scene: sceneText
+                        });
+
+                        window.location.href = 'assessment.html?sessionId=' + currentSessionId + '&scenario=' + scenarioType + '&scene=' + encodedScene;
+                        return;
+                    }
+
+                    // 更新进度
+                    currentProgress = result.progress;
+                    totalNodes = result.totalNodes;
+                    console.log("DEBUG - Updated currentProgress to:", currentProgress);
+
+                    // 更新UI
+                    updateProgressBar();
+                    updateScenarioContent(result.currentNode, result.branches);
+                } else {
+                    alert(data.msg || '操作失败');
+                }
+            } catch (error) {
+                console.error('DEBUG - Error:', error);
+                alert('操作失败，请重试');
+            } finally {
+                document.getElementById('loadingOverlay').style.display = 'none';
+                selectedOption = null;
+                document.querySelectorAll('.option').forEach(el => el.classList.remove('active'));
+            }
+        }
+        
+        // 更新进度条
+        function updateProgressBar() {
+            const dots = document.querySelectorAll('.progress-dot');
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index < currentProgress);
+            });
+        }
+        
+        // 更新场景内容
+        function updateScenarioContent(node, branches) {
+            // 更新标题
+            if (currentScenarioType === 'classroom' || currentScenarioType === 'class_speech') {
+                document.getElementById('scenarioTitle').textContent = '课堂发言压力场景';
+            } else {
+                document.getElementById('scenarioTitle').textContent = '考试DDL压力场景';
+            }
+            
+            // 更新图片
+        const scenarioImageEl = document.getElementById('scenarioImage');
+        const imgElement = document.getElementById('scenarioImgElement');
+        
+        // 设置默认背景色
+        scenarioImageEl.style.backgroundColor = '#f5f5f5';
+        imgElement.style.display = 'none';
+        imgElement.src = '';
+        
+        // 使用后端返回的图片URL，如果没有则使用备用图片
+        const imageUrl = node.imageUrl || getFallbackImage(currentScenarioType);
+        console.log("DEBUG - Using image:", imageUrl);
+        
+        // 使用img标签直接加载图片
+        imgElement.onload = function() {
+            console.log("DEBUG - Image loaded successfully");
+            imgElement.style.display = 'block';
+            scenarioImageEl.style.backgroundColor = 'transparent';
+        };
+        imgElement.onerror = function(event) {
+            console.error('Image load failed:', event);
+            // 如果图片加载失败，尝试使用备用图片
+            const fallbackUrl = getFallbackImage(currentScenarioType);
+            console.log("DEBUG - Falling back to:", fallbackUrl);
+            imgElement.src = fallbackUrl;
+        };
+        imgElement.src = imageUrl;
+            
+            // 更新内容
+            document.getElementById('scenarioContent').textContent = node.content;
+            
+            // 更新选项
+            if (branches && branches.length >= 2) {
+                currentBranches = branches;
+                document.getElementById('optionAText').textContent = branches[0].text;
+                document.getElementById('optionBText').textContent = branches[1].text;
+            }
+            
+            // 重要：停止当前所有音频播放（包括Web Speech）
+            stopAudio();
+            
+            // 如果有音频URL，设置音频
+            if (node.audioUrl) {
+                setupAudio(node.audioUrl);
+            }
+        }
+        
+        // 初始化场景 - 使用本地引擎
+        function initScenario() {
+            try {
+                console.log("DEBUG - initScenario called (local engine)");
+
+                // 使用本地引擎获取随机场景
+                const data = window.localEngine.getRandomScenario();
+                console.log("DEBUG - Local engine response:", data);
+
+                if (data.code === 200) {
+                    const result = data.data;
+
+                    currentSessionId = result.sessionId;
+                    currentProgress = result.progress;
+                    totalNodes = result.totalNodes;
+                    currentScenarioType = result.scenario.type;
+                    currentScenarioName = result.scenario.name;
+                    allNodes = result.allNodes || [];
+                    selectedChoices = [];
+
+                    currentBranches = result.branches;
+
+                    // 更新进度条
+                    updateProgressBar();
+
+                    // 更新场景内容
+                    updateScenarioContent(result.currentNode, result.branches);
+
+                    // 隐藏加载遮罩
+                    document.getElementById('loadingOverlay').style.display = 'none';
+                } else {
+                    alert(data.msg || '获取场景失败');
+                }
+            } catch (error) {
+                console.error('ERROR in initScenario:', error);
+                alert('初始化场景失败: ' + error.message);
+            }
+        }
+        
+        // 音频播放相关
+        let ttsSentences = [];       // 当前文本拆分的句子数组
+        let ttsCurrentIndex = 0;     // 当前播放到第几句
+        let ttsTotalSentences = 0;   // 总句数
+        let ttsPausedIndex = -1;     // 暂停时的句子索引（-1表示未暂停）
+        
+        function setupAudio(audioUrl) {
+            if (audioSource) {
+                audioSource.pause();
+                audioSource = null;
+            }
+            
+            audioSource = new Audio(audioUrl);
+            audioSource.onloadedmetadata = function() {
+                audioDuration = audioSource.duration;
+            };
+            
+            audioSource.onended = function() {
+                stopAudio();
+            };
+        }
+        
+        function toggleAudio() {
+            if (isPlaying) {
+                pauseAudio();
+            } else {
+                playAudio();
+            }
+        }
+        
+        function playAudio() {
+            if (audioSource) {
+                audioSource.play().then(() => {
+                    isPlaying = true;
+                    updatePlayButton(true);
+                    audioInterval = setInterval(updateAudioProgress, 100);
+                }).catch(error => {
+                    console.error('Audio play error:', error);
+                    generateSpeech();
+                });
+            } else {
+                generateSpeech();
+            }
+        }
+        
+        function pauseAudio() {
+            if (audioSource) {
+                audioSource.pause();
+            }
+            if (typeof AndroidTTS !== 'undefined') {
+                // 记录当前播放到的句子索引，以便恢复时从该句继续
+                ttsPausedIndex = AndroidTTS.getCurrentIndex();
+                if (ttsPausedIndex < 0) ttsPausedIndex = 0;
+                AndroidTTS.stop();
+            }
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.pause();
+            }
+            isPlaying = false;
+            updatePlayButton(false);
+            if (audioInterval) {
+                clearInterval(audioInterval);
+                audioInterval = null;
+            }
+        }
+        
+        function stopAudio() {
+            if (audioSource) {
+                audioSource.pause();
+                audioSource.currentTime = 0;
+            }
+            
+            if (typeof AndroidTTS !== 'undefined') {
+                AndroidTTS.stop();
+            }
+            
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+            
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+            
+            isPlaying = false;
+            audioCurrentTime = 0;
+            ttsPausedIndex = -1;
+            
+            updatePlayButton(false);
+            document.getElementById('audioProgressBar').style.width = '0%';
+            
+            if (audioInterval) {
+                clearInterval(audioInterval);
+                audioInterval = null;
+            }
+        }
+        
+        function updatePlayButton(isPlayingState) {
+            const icon = document.querySelector('#playButton i');
+            if (isPlayingState) {
+                icon.classList.remove('fa-play');
+                icon.classList.add('fa-pause');
+            } else {
+                icon.classList.remove('fa-pause');
+                icon.classList.add('fa-play');
+            }
+        }
+        
+        function updateAudioProgress() {
+            if (audioSource && isPlaying) {
+                audioCurrentTime = audioSource.currentTime;
+                const progress = (audioCurrentTime / audioDuration) * 100;
+                document.getElementById('audioProgressBar').style.width = progress + '%';
+            } else if (ttsTotalSentences > 0 && isPlaying) {
+                // TTS 模式下按句子进度更新进度条
+                let idx = ttsCurrentIndex;
+                if (typeof AndroidTTS !== 'undefined') {
+                    idx = AndroidTTS.getCurrentIndex();
+                    if (idx < 0) idx = ttsCurrentIndex;
+                }
+                const progress = (idx / ttsTotalSentences) * 100;
+                document.getElementById('audioProgressBar').style.width = Math.min(progress, 100) + '%';
+            }
+        }
+        
+        // 将文本按句子拆分
+        function splitSentences(text) {
+            // 按中文句号、感叹号、问号、分号、换行符拆分
+            const parts = text.split(/(?<=[。！？；\n])/);
+            const sentences = [];
+            for (const part of parts) {
+                const trimmed = part.trim();
+                if (trimmed.length > 0) {
+                    sentences.push(trimmed);
+                }
+            }
+            return sentences;
+        }
+        
+        // 使用 Android 原生 TTS 引擎播放语音（温柔女声，支持暂停恢复）
+        function generateSpeech() {
+            const content = document.getElementById('scenarioContent').textContent;
+            ttsSentences = splitSentences(content);
+            ttsTotalSentences = ttsSentences.length;
+            
+            // 决定从哪一句开始播放
+            let startIndex = 0;
+            if (ttsPausedIndex >= 0 && ttsPausedIndex < ttsTotalSentences) {
+                startIndex = ttsPausedIndex;
+            }
+            ttsCurrentIndex = startIndex;
+            
+            const jsonSentences = JSON.stringify(ttsSentences);
+            
+            if (typeof AndroidTTS !== 'undefined') {
+                AndroidTTS.setPitch(1.3);
+                AndroidTTS.setRate(0.85);
+                AndroidTTS.speakSentences(jsonSentences, startIndex);
+            } else if ('speechSynthesis' in window) {
+                // 备用：Web Speech API
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(content);
+                utterance.lang = 'zh-CN';
+                utterance.pitch = 1.3;
+                utterance.rate = 0.85;
+                utterance.onstart = () => { isPlaying = true; updatePlayButton(true); };
+                utterance.onend = () => stopAudio();
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+        
+        // TTS 回调（由 Android 端调用）
+        window.onTTSStart = function(index) {
+            ttsCurrentIndex = index || 0;
+            isPlaying = true;
+            updatePlayButton(true);
+        };
+        
+        window.onTTSNext = function(index) {
+            ttsCurrentIndex = index || 0;
+        };
+        
+        window.onTTSDone = function() {
+            stopAudio();
+        };
+        
+        window.onTTSError = function() {
+            console.error('TTS error');
+            stopAudio();
+        };
+        
+        // 快退5秒
+        function skipBackward() {
+            if (audioSource && isPlaying) {
+                audioSource.currentTime = Math.max(0, audioSource.currentTime - 5);
+            } else if (!audioSource && isPlaying) {
+                // Web Speech API不支持快退，停止后重新生成语音从头播放
+                stopAudio();
+                setTimeout(() => generateSpeech(), 100);
+            }
+        }
+        
+        // 快进5秒
+        function skipForward() {
+            if (audioSource && isPlaying) {
+                audioSource.currentTime = Math.min(audioDuration, audioSource.currentTime + 5);
+            } else if (!audioSource && isPlaying) {
+                // Web Speech API不支持快进，停止当前语音
+                stopAudio();
+            }
+        }
+        
+        // 事件监听
+        document.getElementById('playButton').addEventListener('click', toggleAudio);
+        
+        document.getElementById('prevButton').addEventListener('click', skipBackward);
+        
+        document.getElementById('nextAudioButton').addEventListener('click', skipForward);
+        
+        document.getElementById('audioProgress').addEventListener('click', function(e) {
+            if (!audioSource) return;
+            
+            const rect = this.getBoundingClientRect();
+            const percent = (e.clientX - rect.left) / rect.width;
+            audioSource.currentTime = percent * audioDuration;
+        });
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', initScenario);
+    </script>
+</body>
+</html>

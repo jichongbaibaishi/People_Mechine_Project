@@ -1,0 +1,3 @@
+com.example.stressassessment.test
+style WhiteBackgroundDialogTheme
+style WhiteBackgroundTheme

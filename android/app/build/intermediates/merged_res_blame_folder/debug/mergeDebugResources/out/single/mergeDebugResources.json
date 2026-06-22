@@ -1,0 +1,10 @@
+[
+    {
+        "merged": "com.example.stressassessment.app-debug-28:/layout_activity_main.xml.flat",
+        "source": "com.example.stressassessment.app-main-30:/layout/activity_main.xml"
+    },
+    {
+        "merged": "com.example.stressassessment.app-debug-28:/drawable_ic_launcher.xml.flat",
+        "source": "com.example.stressassessment.app-main-30:/drawable/ic_launcher.xml"
+    }
+]

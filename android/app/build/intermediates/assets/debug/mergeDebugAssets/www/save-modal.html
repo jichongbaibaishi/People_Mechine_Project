@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>保存评估结果</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="./memory.js"></script>
+    <style>
+        .modal-fade { animation: fadeIn 0.3s ease-out forwards; }
+        .modal-slide { animation: slideUp 0.4s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+    <div class="fixed inset-0 bg-black/50 modal-fade" id="modalBg"></div>
+
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative z-10 modal-slide">
+        <div class="text-center mb-6">
+            <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fa-solid fa-floppy-disk text-2xl text-purple-600"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-800">保存评估结果</h2>
+            <p class="text-gray-500 mt-2">将本次压力评估结果存入长期记忆库</p>
+        </div>
+
+        <div class="space-y-4 mb-6">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">结果名称</label>
+                <input type="text" id="resultTitle" placeholder="例如：2025-01-01 压力评估"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">备注描述（可选）</label>
+                <textarea id="resultDesc" rows="2" placeholder="简单描述本次状态..."
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition"></textarea>
+            </div>
+        </div>
+
+        <div class="flex gap-3">
+            <button onclick="viewResult()" class="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium">
+                仅查看结果
+            </button>
+            <button onclick="saveResult()" class="flex-1 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium">
+                保存并查看
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // 从 localStorage 读取评估结果
+        // ============================================================
+        function getResultData() {
+            try {
+                const stored = localStorage.getItem('assessmentResult');
+                if (stored) {
+                    const data = JSON.parse(stored);
+                    const dims = data.dimensions || {};
+                    // 雷达图数据：四维得分 * 20 映射到 0-100
+                    const radarData = [
+                        (dims.pressure?.score || 3) * 20,
+                        (dims.avoidance?.score || 3) * 20,
+                        (dims.self_efficacy?.score || 3) * 20,
+                        (dims.coping?.score || 3) * 20
+                    ];
+                    return {
+                        title: "",
+                        desc: "",
+                        score: data.comprehensive_risk?.index || 0,
+                        radar: radarData,
+                        visual: {
+                            level: data.comprehensive_risk?.level || '未知',
+                            suggest: data.suggestions?.join('；') || '暂无建议'
+                        }
+                    };
+                }
+            } catch (e) {
+                console.error('读取评估结果失败:', e);
+            }
+            // 兜底
+            return { title: "", desc: "", score: 0, radar: [60,60,60,60], visual: { level: "未知", suggest: "无数据" } };
+        }
+
+        function viewResult() {
+            // 直接跳转结果页，result.html 会读取 localStorage
+            window.location.href = 'result.html';
+        }
+
+        async function saveResult() {
+            const title = document.getElementById("resultTitle").value.trim();
+            if (!title) {
+                alert("请输入结果名称！");
+                return;
+            }
+
+            const resultData = getResultData();
+            resultData.title = title;
+            resultData.desc = document.getElementById("resultDesc").value;
+
+            try {
+                const res = await memoryManager.saveRecord(resultData);
+                if (res.code === 200) {
+                    sessionStorage.setItem("currentRecordId", res.data.id);
+                    // 保存成功后，清除 localStorage 中临时数据（避免重复使用）
+                    localStorage.removeItem('assessmentResult');
+                    alert("保存成功！");
+                    window.location.href = "result.html";
+                } else {
+                    alert("保存失败：" + res.msg);
+                }
+            } catch (error) {
+                console.error("保存报错：", error);
+                alert("保存失败，请重试！");
+            }
+        }
+
+        // 点击空白区域返回首页
+        document.getElementById("modalBg").onclick = () => {
+            if (confirm("确定要退出吗？未保存的结果将丢失。")) {
+                localStorage.removeItem('assessmentResult');
+                window.location.href = "home.html";
+            }
+        };
+
+        // 如果 localStorage 中没有数据，提示并跳转
+        window.onload = function() {
+            const stored = localStorage.getItem('assessmentResult');
+            if (!stored) {
+                alert("未找到评估结果，请先完成答题。");
+                window.location.href = "assessment.html";
+            }
+        };
+    </script>
+</body>
+</html>

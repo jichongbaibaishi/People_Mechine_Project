@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>评估结果</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="./memory.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="max-w-4xl mx-auto p-4 md:p-6">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">压力评估结果</h1>
+            <p class="text-gray-500 mt-2">详细分析与建议</p>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow p-6 text-center mb-6">
+            <div class="text-4xl font-bold text-purple-600" id="score">--</div>
+            <div class="text-gray-500">压力综合评分</div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow p-6 mb-6">
+            <h3 class="text-lg font-semibold mb-4">四维压力雷达图</h3>
+            <div class="h-64"><canvas id="radarChart"></canvas></div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow p-6 mb-6">
+            <h3 class="text-lg font-semibold mb-3">状态解读</h3>
+            <p class="text-gray-700 leading-relaxed" id="suggest">加载中...</p>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+            <button onclick="location.href='history.html'" class="p-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                <i class="fa-solid fa-history mr-1"></i> 历史记录
+            </button>
+            <button onclick="location.href='home.html'" class="p-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                <i class="fa-solid fa-home mr-1"></i> 返回首页
+            </button>
+            <button onclick="location.href='chat.html'" class="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                <i class="fa-solid fa-comments mr-1"></i> AI疏导
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let radarChart = null;
+
+        function renderRadar(data = [70, 50, 80, 60]) {
+            const ctx = document.getElementById('radarChart').getContext('2d');
+            if (radarChart) radarChart.destroy();
+
+            radarChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['压力水平', '回避倾向', '自我效能', '应对方式'],
+                    datasets: [{
+                        data: data,
+                        backgroundColor: 'rgba(109,40,217,0.2)',
+                        borderColor: '#6d28d9',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#6d28d9'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { r: { min: 0, max: 100 } }
+                }
+            });
+        }
+
+        // ============================================================
+        // 数据加载：优先展示 localStorage 中的最新结果
+        // ============================================================
+        async function loadData() {
+            try {
+                // 1. 检查是否有实时结果（来自 assessment.html）
+                const storedResult = localStorage.getItem('assessmentResult');
+                if (storedResult) {
+                    const data = JSON.parse(storedResult);
+                    const score = data.comprehensive_risk?.index || 0;
+                    document.getElementById("score").innerText = score;
+                    document.getElementById("suggest").innerText = data.suggestions?.join('；') || '暂无建议';
+                    
+                    // 雷达图数据（四个维度得分 * 20 映射到 0-100）
+                    const radarData = [
+                        data.dimensions?.pressure?.score || 0,
+                        data.dimensions?.avoidance?.score || 0,
+                        data.dimensions?.self_efficacy?.score || 0,
+                        data.dimensions?.coping?.score || 0
+                    ].map(s => s * 20);
+                    renderRadar(radarData);
+                    return;
+                }
+
+                // 2. 没有实时结果，尝试从历史记录接口读取
+                const recordId = sessionStorage.getItem("currentRecordId");
+                if (!recordId) {
+                    // 没有任何数据，显示默认值
+                    document.getElementById("score").innerText = "65";
+                    document.getElementById("suggest").innerText = "中度压力，建议合理安排作息，适当放松身心";
+                    renderRadar();
+                    return;
+                }
+
+                const result = await memoryManager.getRecordDetail(recordId);
+                if (result.code === 200 && result.data) {
+                    const data = result.data;
+                    document.getElementById("score").innerText = data.score || 65;
+                    document.getElementById("suggest").innerText = data.visual?.suggest || data.desc || "暂无建议";
+                    
+                    // 雷达图数据
+                    const radarData = data.radar || [70, 50, 80, 60];
+                    renderRadar(radarData);
+                } else {
+                    document.getElementById("score").innerText = "65";
+                    document.getElementById("suggest").innerText = "暂无建议";
+                    renderRadar();
+                }
+            } catch (e) {
+                console.error("加载失败", e);
+                document.getElementById("score").innerText = "65";
+                document.getElementById("suggest").innerText = "中度压力，建议合理安排作息，适当放松身心";
+                renderRadar();
+            }
+        }
+
+        window.onload = loadData;
+    </script>
+</body>
+</html>

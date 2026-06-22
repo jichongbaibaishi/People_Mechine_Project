@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 压力倾诉疏导</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+        :root {
+            --primary-color: #8a7bff;
+            --secondary-color: #b3a7ff;
+            --background-color: #f8f9fa;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --border-radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: var(--background-color);
+            margin: 0;
+            padding: 0;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+
+        .header {
+            height: 44px;
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .header .back {
+            font-size: 20px;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+
+        .header .title {
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .header .context-badge {
+            font-size: 11px;
+            color: var(--primary-color);
+            background: rgba(138, 123, 255, 0.1);
+            padding: 2px 8px;
+            border-radius: 10px;
+            cursor: default;
+        }
+
+        .chat-container {
+            flex: 1;
+            padding: 20px;
+            padding-bottom: 180px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: var(--border-radius);
+            line-height: 1.6;
+            word-break: break-word;
+            animation: messageIn 0.3s ease-out;
+        }
+
+        @keyframes messageIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .ai-message {
+            align-self: flex-start;
+            background-color: white;
+            box-shadow: var(--shadow);
+            border-bottom-left-radius: 4px;
+            white-space: pre-line;
+        }
+
+        .user-message {
+            align-self: flex-end;
+            background-color: var(--primary-color);
+            color: white;
+            box-shadow: var(--shadow);
+            border-bottom-right-radius: 4px;
+        }
+
+        .message-content {
+            font-size: 14px;
+        }
+
+        .message-time {
+            font-size: 10px;
+            color: #999999;
+            margin-top: 4px;
+            text-align: right;
+        }
+
+        .ai-message .message-time {
+            text-align: left;
+        }
+
+        .user-message .message-time {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .typing-indicator {
+            align-self: flex-start;
+            background-color: white;
+            box-shadow: var(--shadow);
+            border-radius: var(--border-radius);
+            border-bottom-left-radius: 4px;
+            padding: 16px 20px;
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #ccc;
+            animation: typingBounce 1.4s infinite ease-in-out both;
+        }
+        .typing-dot:nth-child(1) { animation-delay: 0s; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typingBounce {
+            0%, 80%, 100% { transform: scale(0.6); }
+            40% { transform: scale(1); }
+        }
+
+        .error-message {
+            align-self: center;
+            background-color: #fff3f3;
+            border: 1px solid #ffcccc;
+            color: #cc3333;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            text-align: center;
+        }
+
+        .error-message .retry-link {
+            color: var(--primary-color);
+            cursor: pointer;
+            text-decoration: underline;
+            margin-left: 4px;
+        }
+
+        .input-area {
+            background-color: white;
+            border-top: 1px solid #e0e0e0;
+            padding: 12px 16px 16px;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+        }
+
+        .quick-tags {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+
+        .quick-tag {
+            padding: 6px 14px;
+            border: 1px solid #e0e0e0;
+            border-radius: 16px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.3s ease;
+            background: white;
+            user-select: none;
+        }
+
+        .quick-tag:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .quick-tag.active {
+            border-color: var(--primary-color);
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .text-input {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1px solid #e0e0e0;
+            border-radius: var(--border-radius);
+            font-size: 14px;
+            resize: none;
+            min-height: 42px;
+            max-height: 120px;
+            font-family: inherit;
+        }
+
+        .text-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(138, 123, 255, 0.1);
+        }
+
+        .send-button {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .send-button:hover {
+            background-color: #7a6bff;
+            transform: scale(1.08);
+        }
+
+        .send-button:disabled {
+            background-color: #e0e0e0;
+            cursor: not-allowed;
+            transform: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 顶部导航栏 -->
+    <div class="header">
+        <div class="back" onclick="goBack()"><i class="fa fa-arrow-left"></i></div>
+        <div class="title">AI 压力倾诉疏导</div>
+        <div class="context-badge" id="contextBadge" title="当前压力评估上下文">--</div>
+    </div>
+
+    <!-- 中部聊天消息气泡区 -->
+    <div class="chat-container" id="chatContainer">
+        <!-- 动态填充 -->
+    </div>
+
+    <!-- 底部输入区域 -->
+    <div class="input-area">
+        <div class="quick-tags" id="quickTags">
+            <div class="quick-tag" data-tag="焦虑" onclick="selectEmotionTag('焦虑', this)">焦虑</div>
+            <div class="quick-tag" data-tag="紧张" onclick="selectEmotionTag('紧张', this)">紧张</div>
+            <div class="quick-tag" data-tag="烦躁" onclick="selectEmotionTag('烦躁', this)">烦躁</div>
+            <div class="quick-tag" data-tag="放松" onclick="selectEmotionTag('放松', this)">放松</div>
+        </div>
+
+        <div class="input-container">
+            <textarea class="text-input" placeholder="输入你的感受..." id="messageInput" rows="1"></textarea>
+            <button class="send-button" onclick="sendMessage()" id="sendBtn">
+                <i class="fa fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+    <script src="local_engine.js"></script>
+    <script src="local_storage.js"></script>
+    <script>
+        // ============================================================
+        // 配置 - 使用本地引擎替代后端API
+        // ============================================================
+        const CHAT_STORAGE_KEY = 'chat_history_' + (sessionStorage.getItem('chatSessionId') || 'default');
+
+        // ============================================================
+        // 状态
+        // ============================================================
+        let sessionId = sessionStorage.getItem('chatSessionId') || generateUUID();
+        let assessmentData = null;
+        let selectedEmotionTag = null;
+        let isWaitingForReply = false;
+
+        // 获取用户ID
+        function getUserId() {
+            let anonId = localStorage.getItem('anonymous_id');
+            if (!anonId) {
+                const timestamp = Date.now().toString();
+                const randomStr = Math.random().toString(36).substr(2, 8);
+                anonId = ('anon_' + timestamp + '_' + randomStr).substring(0, 50);
+                localStorage.setItem('anonymous_id', anonId);
+            }
+            const token = localStorage.getItem('token');
+            if (token) return 'user_' + token.substring(0, 16);
+            return anonId;
+        }
+
+        function generateUUID() {
+            return 'chat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
+        }
+
+        // ============================================================
+        // DOM 引用
+        // ============================================================
+        const chatContainer = document.getElementById('chatContainer');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const contextBadge = document.getElementById('contextBadge');
+
+        // ============================================================
+        // 初始化
+        // ============================================================
+        function init() {
+            // 读取评估数据
+            loadAssessmentData();
+
+            // 保存 session ID
+            sessionStorage.setItem('chatSessionId', sessionId);
+
+            // 加载历史消息 或 获取开场白
+            loadChatHistory().then(hasHistory => {
+                if (!hasHistory) {
+                    fetchGreeting();
+                }
+            });
+
+            // 绑定回车发送
+            messageInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            // 自动调整输入框高度
+            messageInput.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+            });
+        }
+
+        function loadAssessmentData() {
+            try {
+                const stored = localStorage.getItem('assessmentResult');
+                if (stored) {
+                    assessmentData = JSON.parse(stored);
+                    // 更新顶栏标签
+                    const score = assessmentData.comprehensive_risk?.index ||
+                                  assessmentData.score || '--';
+                    contextBadge.textContent = '压力: ' + score;
+                    contextBadge.title = '当前评估上下文：压力综合评分 ' + score;
+                } else {
+                    contextBadge.textContent = '无评估';
+                    contextBadge.title = '未找到压力评估数据，使用默认模式';
+                }
+            } catch (e) {
+                console.error('读取评估数据失败:', e);
+                contextBadge.textContent = '--';
+            }
+        }
+
+        // ============================================================
+        // 加载聊天历史（从本地存储）
+        // ============================================================
+        async function loadChatHistory() {
+            try {
+                const chats = window.localStorageManager.getChatHistory();
+                const sessionChats = chats.filter(c => c.sessionId === sessionId);
+
+                if (sessionChats.length > 0) {
+                    sessionChats.forEach(msg => {
+                        if (msg.role === 'user') {
+                            addUserMessage(msg.content, msg.timestamp);
+                        } else if (msg.role === 'assistant') {
+                            addAIMessage(msg.content, msg.timestamp);
+                        }
+                    });
+                    scrollToBottom();
+                    return true;
+                }
+                return false;
+            } catch (e) {
+                console.error('加载历史失败:', e);
+                return false;
+            }
+        }
+
+        // ============================================================
+        // 获取 AI 开场白（使用本地引擎）
+        // ============================================================
+        async function fetchGreeting() {
+            showTyping();
+            try {
+                const result = window.localEngine.getGreeting(assessmentData);
+
+                removeTyping();
+
+                if (result.code === 200 && result.data) {
+                    const greeting = result.data.greeting || result.data.reply;
+                    addAIMessage(greeting);
+                    // 保存到本地存储
+                    window.localStorageManager.saveChatMessage({
+                        sessionId: sessionId,
+                        role: 'assistant',
+                        content: greeting
+                    });
+                } else {
+                    // fallback greeting
+                    const fallback = getFallbackGreeting();
+                    addAIMessage(fallback);
+                    window.localStorageManager.saveChatMessage({
+                        sessionId: sessionId,
+                        role: 'assistant',
+                        content: fallback
+                    });
+                }
+            } catch (e) {
+                removeTyping();
+                // 出错时使用本地 fallback
+                const fallback = getFallbackGreeting();
+                addAIMessage(fallback);
+                window.localStorageManager.saveChatMessage({
+                    sessionId: sessionId,
+                    role: 'assistant',
+                    content: fallback
+                });
+            }
+        }
+
+        function getFallbackGreeting() {
+            const score = assessmentData?.comprehensive_risk?.index ||
+                          assessmentData?.score || 50;
+            if (score >= 80) {
+                return '你好，我是你的 AI 压力疏导助手 🌙\n\n根据评估，我能感受到你目前承受着较大的压力。这没什么可羞耻的——压力是身体在告诉你「我需要被关心了」。\n\n接下来的时间里，你可以随意和我聊聊任何让你感到困扰的事。我会认真倾听，陪你一起梳理。';
+            } else if (score >= 50) {
+                return '你好，我是你的 AI 压力疏导助手 🌿\n\n评估显示你目前有一些压力，这在学生时代是很正常的。你可以和我聊聊最近在烦恼什么，或者只是随便说说今天的感受。我在这里陪你。';
+            } else {
+                return '你好，我是你的 AI 压力疏导助手 ☀️\n\n你的状态保持得不错！即使状态良好，偶尔也会遇到烦心的事。不管是分享快乐还是倾诉烦恼，我都在这里。';
+            }
+        }
+
+        // ============================================================
+        // 发送消息
+        // ============================================================
+        async function sendMessage() {
+            if (isWaitingForReply) return;
+
+            const content = messageInput.value.trim();
+            if (!content) return;
+
+            // 添加用户消息到界面
+            addUserMessage(content);
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+
+            // 禁用发送
+            isWaitingForReply = true;
+            sendBtn.disabled = true;
+            showTyping();
+
+            // 使用本地引擎
+            try {
+                const result = window.localEngine.chat(content, {
+                    assessment: assessmentData,
+                    emotion_tag: selectedEmotionTag
+                });
+                removeTyping();
+
+                if (result.code === 200 && result.data) {
+                    addAIMessage(result.data.reply);
+                    // 保存用户消息和AI回复到本地存储
+                    window.localStorageManager.saveChatMessage({
+                        sessionId: sessionId,
+                        role: 'user',
+                        content: content
+                    });
+                    window.localStorageManager.saveChatMessage({
+                        sessionId: sessionId,
+                        role: 'assistant',
+                        content: result.data.reply
+                    });
+                } else {
+                    addErrorMessage('服务异常: ' + (result.msg || '未知错误'));
+                }
+            } catch (e) {
+                removeTyping();
+                console.error('发送消息失败:', e);
+                addErrorMessage('本地服务异常，请重试', true);
+            }
+
+            // 恢复发送按钮
+            isWaitingForReply = false;
+            sendBtn.disabled = false;
+
+            // 清除情绪标签选中状态
+            if (selectedEmotionTag) {
+                clearEmotionTag();
+            }
+        }
+
+        // ============================================================
+        // 情绪标签
+        // ============================================================
+        function selectEmotionTag(tag, element) {
+            // 如果点击已选中的标签，取消选中
+            if (selectedEmotionTag === tag) {
+                clearEmotionTag();
+                return;
+            }
+
+            // 清除之前的选中状态
+            document.querySelectorAll('.quick-tag').forEach(el => el.classList.remove('active'));
+
+            // 设置新选中
+            selectedEmotionTag = tag;
+            element.classList.add('active');
+
+            // 将标签文字填入输入框
+            const tagMessages = {
+                '焦虑': '我最近感到有些焦虑，',
+                '紧张': '我现在有些紧张，',
+                '烦躁': '我感到很烦躁，',
+                '放松': '最近感觉还挺放松的，'
+            };
+            messageInput.value = tagMessages[tag] || '';
+            messageInput.focus();
+            // 自动调整高度
+            messageInput.style.height = 'auto';
+            messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + 'px';
+        }
+
+        function clearEmotionTag() {
+            selectedEmotionTag = null;
+            document.querySelectorAll('.quick-tag').forEach(el => el.classList.remove('active'));
+        }
+
+        // ============================================================
+        // UI 渲染方法
+        // ============================================================
+        function addUserMessage(content, timeStr) {
+            const now = new Date();
+            const time = timeStr ? formatTime(timeStr) :
+                         now.getHours().toString().padStart(2, '0') + ':' +
+                         now.getMinutes().toString().padStart(2, '0');
+
+            const div = document.createElement('div');
+            div.className = 'user-message message';
+            div.innerHTML = `
+                <div class="message-content">${escapeHTML(content)}</div>
+                <div class="message-time">${time}</div>
+            `;
+            chatContainer.appendChild(div);
+            scrollToBottom();
+        }
+
+        function addAIMessage(content, timeStr) {
+            const now = new Date();
+            const time = timeStr ? formatTime(timeStr) :
+                         now.getHours().toString().padStart(2, '0') + ':' +
+                         now.getMinutes().toString().padStart(2, '0');
+
+            const div = document.createElement('div');
+            div.className = 'ai-message message';
+            div.innerHTML = `
+                <div class="message-content">${escapeHTML(content)}</div>
+                <div class="message-time">${time}</div>
+            `;
+            chatContainer.appendChild(div);
+            scrollToBottom();
+        }
+
+        function showTyping() {
+            const div = document.createElement('div');
+            div.className = 'typing-indicator';
+            div.id = 'typingIndicator';
+            div.innerHTML = `
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            `;
+            chatContainer.appendChild(div);
+            scrollToBottom();
+        }
+
+        function removeTyping() {
+            const el = document.getElementById('typingIndicator');
+            if (el) el.remove();
+        }
+
+        function addErrorMessage(msg, canRetry) {
+            const div = document.createElement('div');
+            div.className = 'error-message';
+            if (canRetry) {
+                div.innerHTML = escapeHTML(msg) +
+                    '<span class="retry-link" onclick="retryLastMessage()">点击重试</span>';
+            } else {
+                div.textContent = msg;
+            }
+            chatContainer.appendChild(div);
+            scrollToBottom();
+        }
+
+        function retryLastMessage() {
+            // 移除错误消息
+            const errors = chatContainer.querySelectorAll('.error-message');
+            errors.forEach(e => e.remove());
+            // 找到最后一条用户消息并重新发送
+            const userMsgs = chatContainer.querySelectorAll('.user-message');
+            if (userMsgs.length > 0) {
+                const lastUser = userMsgs[userMsgs.length - 1];
+                const content = lastUser.querySelector('.message-content').textContent;
+                // 移除最后的 AI 回复（如果有）
+                const lastMsg = chatContainer.lastElementChild;
+                // 重新发送
+                isWaitingForReply = false;
+                sendBtn.disabled = false;
+                messageInput.value = content;
+                sendMessage();
+            }
+        }
+
+        function scrollToBottom() {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function formatTime(timeStr) {
+            // 兼容 'YYYY-MM-DD HH:MM:SS' 格式
+            try {
+                const parts = timeStr.split(' ');
+                if (parts.length >= 2) {
+                    const timePart = parts[1];
+                    const t = timePart.split(':');
+                    return t[0] + ':' + t[1];
+                }
+            } catch (e) {}
+            return timeStr;
+        }
+
+        function escapeHTML(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // ============================================================
+        // 导航
+        // ============================================================
+        function goBack() {
+            window.location.href = 'result.html';
+        }
+
+        // ============================================================
+        // 启动
+        // ============================================================
+        init();
+    </script>
+</body>
+</html>
