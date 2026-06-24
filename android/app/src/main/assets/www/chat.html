@@ -371,10 +371,20 @@
 
         function loadAssessmentData() {
             try {
+                // 优先从 assessmentResult 读取（未保存时）
                 const stored = localStorage.getItem('assessmentResult');
                 if (stored) {
                     assessmentData = JSON.parse(stored);
-                    // 更新顶栏标签
+                } else {
+                    // 兜底：从 memoryManager 读取最新记录（保存后 assessmentResult 已被清除）
+                    const records = window.localStorageManager.getRecords();
+                    if (records && records.length > 0) {
+                        const latest = records[records.length - 1];
+                        assessmentData = latest;
+                    }
+                }
+
+                if (assessmentData) {
                     const score = assessmentData.comprehensive_risk?.index ||
                                   assessmentData.score || '--';
                     contextBadge.textContent = '压力: ' + score;
@@ -421,7 +431,7 @@
         async function fetchGreeting() {
             showTyping();
             try {
-                const result = window.localEngine.getGreeting(assessmentData);
+                const result = await window.localEngine.getGreeting(assessmentData);
 
                 removeTyping();
 
@@ -490,7 +500,7 @@
 
             // 使用本地引擎
             try {
-                const result = window.localEngine.chat(content, {
+                const result = await window.localEngine.chat(content, {
                     assessment: assessmentData,
                     emotion_tag: selectedEmotionTag
                 });

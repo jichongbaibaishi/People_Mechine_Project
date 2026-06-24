@@ -378,9 +378,9 @@
                 
                 if (result.code === 200 && result.data && result.data.questions) {
                     questions = result.data.questions.map((q, idx) => ({
-                        dimension: q.type || 'dimension_' + idx,
-                        text: q.question,
-                        options: q.options
+                        dimension: q.dimension || 'dimension_' + idx,
+                        text: q.text,
+                        direction: q.direction || 'positive'
                     }));
                     answers = questions.map(q => ({
                         dimension: q.dimension,

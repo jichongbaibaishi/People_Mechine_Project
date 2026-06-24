@@ -1,10 +1,26 @@
 // ======================
 // 本地场景引擎 - 替代后端API
 // 在Android WebView中运行，无需服务器
+// AI对话直接调用DeepSeek API，失败时回退到本地规则引擎
 // ======================
 
 (function() {
     'use strict';
+
+    // ============================================================
+    // DeepSeek API 配置 - 直接调用，无需后端服务
+    // ============================================================
+    const DEEPSEEK_API_KEY = 'sk-d03c41b5703e4b2e85a5c96c36370752';
+    const DEEPSEEK_MODEL = 'deepseek-v4-pro';
+    const DEEPSEEK_ENDPOINT = 'https://api.deepseek.com/v1/chat/completions';
+    const API_TIMEOUT = 15000; // 15秒超时
+    const MAX_TOKENS = 800;
+    const TEMPERATURE = 0.7;
+
+    // System Prompt - 与后端 deepseek.py 一致
+    const SYSTEM_PROMPT_TEMPLATE = "你是一位专业、温暖的学生压力疏导顾问，名字叫「小安」。你的职责是通过共情式的对话帮助学生缓解压力、梳理情绪、找到可行的应对方法。\n\n【你的角色定位】\n- 你是一名经过心理咨询培训的AI助手，专门服务中国大学生。\n- 你的回复风格：温暖共情、不评判、不贴标签、不说教。\n- 你会用适度的自我暴露和正常化技术，让学生感到「不是只有我一个人这样」。\n- 你会提供具体、可操作的减压建议（如呼吸练习、认知重构、行为激活等）。\n- 你会在合适的时候引导学生关注自身已有的资源和优势。\n- 当学生表现出严重心理危机迹象时，你会温和地建议寻求校内心理咨询或专业帮助。\n\n【重要边界】\n- 你不是执业心理治疗师，不进行临床诊断。\n- 不推荐药物，不替代专业治疗。\n- 如果学生表露自伤或伤人的意图，你必须认真对待并建议立即拨打心理援助热线（如 12355 青少年服务热线 或 010-82951332 北京市心理援助热线）。\n- 保持对话聚焦在学生的感受和应对上，不做长篇学术解释。\n\n【当前学生的压力评估数据】\n{assessment_context}\n\n【学生当前的情绪状态】\n{emotion_context}\n\n请根据以上信息，以「小安」的身份回复学生。结合评估数据和情绪标签，给出针对性的回应。回复简洁有力，一般不超过300字。如果学生表达了具体的困扰，优先回应学生的困扰再结合评估数据给出建议。";
+
+    const GREETING_SYSTEM_PROMPT = "你是一位专业、温暖的学生压力疏导顾问，名字叫「小安」。现在你需要向一位刚完成压力评估的学生发送开场问候。\n\n【当前学生的压力评估数据】\n{assessment_context}\n\n请生成一段温暖的开场白，要求：\n1. 根据学生的压力水平给予共情回应（高压→温柔安抚，中压→正常化体验，低压→肯定鼓励）\n2. 简要说明你可以在哪些方面帮助ta（倾听、梳理情绪、提供减压方法等）\n3. 鼓励学生开始分享感受\n回复控制在200字以内，使用自然的口语化表达，以「小安」的身份发言。";
 
     // 场景类型定义
     const SCENARIO_TYPES = {
@@ -293,59 +309,61 @@
     };
 
     // ============================================================
-    // 微评估题目 - 四个维度各一题（压力水平、回避倾向、自我效能、应对方式）
+    // 微评估题目 - 与后端 questions.py 完全一致
     // ============================================================
     const MICRO_ASSESSMENT_QUESTIONS = {
+        // 课堂发言压力场景（对应后端 CLASS_SPEECH_QUESTIONS）
         "classroom": [
             {
+                "id": 1,
+                "text": "在课堂上被点名回答问题时，我感到强烈的紧张和不安。",
                 "dimension": "pressure",
-                "question": "在刚才的课堂发言场景中，你感受到的紧张和压力程度如何？",
-                "options": ["几乎没有压力", "有一点紧张", "比较紧张", "非常紧张", "极度焦虑"],
-                "type": "pressure"
+                "direction": "positive"
             },
             {
+                "id": 2,
+                "text": "我常常希望老师不要点我回答问题，宁愿默默听课。",
                 "dimension": "avoidance",
-                "question": "面对被点名发言的情况，你内心想要回避或逃避的冲动有多强？",
-                "options": ["完全不想回避", "稍微有点想回避", "比较想回避", "很想回避", "强烈想逃避"],
-                "type": "avoidance"
+                "direction": "positive"
             },
             {
+                "id": 3,
+                "text": "我对自己在课堂上应对突发提问的能力很有信心。",
                 "dimension": "self_efficacy",
-                "question": "你觉得自己有能力应对课堂发言这样的场景吗？",
-                "options": ["完全有信心", "比较有把握", "不太确定", "比较没信心", "完全没信心"],
-                "type": "self_efficacy"
+                "direction": "positive"
             },
             {
+                "id": 4,
+                "text": "当感到发言紧张时，我会主动使用深呼吸或积极暗示来调整状态。",
                 "dimension": "coping",
-                "question": "当感到发言紧张时，你会主动使用深呼吸或积极暗示来调整状态吗？",
-                "options": ["完全不符合", "比较不符合", "不确定", "比较符合", "完全符合"],
-                "type": "coping"
+                "direction": "positive"
             }
         ],
+        // 考试压力场景（对应后端 EXAM_QUESTIONS）
         "exam": [
             {
+                "id": 1,
+                "text": "最近一周，我感到学业上的压力让我难以承受。",
                 "dimension": "pressure",
-                "question": "在考试倒计时的场景中，你感受到的学业压力程度如何？",
-                "options": ["几乎没有压力", "有一点压力", "压力较大", "压力很大", "压力极大"],
-                "type": "pressure"
+                "direction": "positive"
             },
             {
+                "id": 2,
+                "text": "我往往会推迟或完全避开那些需要静心完成的学习任务。",
                 "dimension": "avoidance",
-                "question": "面对繁重的复习任务，你有多大冲动想要拖延或逃避？",
-                "options": ["完全不想逃避", "偶尔想拖延", "经常想拖延", "很想逃避", "完全放弃"],
-                "type": "avoidance"
+                "direction": "positive"
             },
             {
+                "id": 3,
+                "text": "我相信自己有能力应对即将到来的考试挑战。",
                 "dimension": "self_efficacy",
-                "question": "你觉得自己有能力在有限时间内完成复习并考好吗？",
-                "options": ["完全有信心", "比较有把握", "不太确定", "比较没信心", "完全没信心"],
-                "type": "self_efficacy"
+                "direction": "positive"
             },
             {
+                "id": 4,
+                "text": "我会主动使用积极的方法（如运动、与朋友倾诉、制定计划）来缓解考试压力。",
                 "dimension": "coping",
-                "question": "面对考试压力时，你会主动制定计划、寻求帮助或适当放松来应对吗？",
-                "options": ["完全不符合", "比较不符合", "不确定", "比较符合", "完全符合"],
-                "type": "coping"
+                "direction": "positive"
             }
         ]
     };
@@ -625,147 +643,603 @@
             };
         },
 
-        // AI对话（本地模拟）- 结合评估数据和情绪标签
+        // AI对话 - 直接调用DeepSeek API，失败时回退到本地规则引擎
         chat: function(message, context) {
             const assessment = context && context.assessment;
             const emotionTag = context && context.emotion_tag;
+            const history = context && context.history || [];
 
-            // 获取压力评分
-            let stressScore = 50;
-            if (assessment) {
-                stressScore = assessment.comprehensive_risk?.index ||
-                              assessment.score || 50;
-            }
+            return new Promise(function(resolve) {
+                try {
+                    // 格式化评估上下文
+                    let assessmentContext = "暂无评估数据，请基于学生的文字内容进行一般性回应。";
+                    let emotionContext = "学生未选择情绪标签。";
 
-            const lowerMsg = message.toLowerCase();
+                    if (assessment) {
+                        const lines = [];
+                        let score = assessment.score || assessment.comprehensive_risk?.index;
+                        if (score !== undefined && score !== null) {
+                            try {
+                                score = parseInt(score);
+                                let tier = score >= 80 ? "高风险 —— 学生正承受很大压力，需要温和共情" :
+                                           score >= 50 ? "中等风险 —— 学生有一定压力，需要正常化和支持" :
+                                           "低风险 —— 学生状态较好，可以给予肯定和鼓励";
+                                lines.push("- 综合压力指数：" + score + "/100（" + tier + "）");
+                            } catch (e) {}
+                        }
 
-            // 根据情绪标签生成针对性回复
-            if (emotionTag === '焦虑') {
-                const reply = "焦虑是很常见的情绪，说明你在乎这件事。试着把注意力拉回当下——你现在能做的最小一步是什么？\n\n" +
-                    "焦虑的时候，我们的思绪容易飘向未来。试试「5-4-3-2-1」grounding技巧：说出5个你看到的东西、4个你摸到的、3个你听到的、2个你闻到的、1个你尝到的。\n\n" +
-                    "你的焦虑在提醒你有些事情需要关注。不妨把它写下来，分清哪些是你能控制的，哪些是你控制不了的。把注意力放在能改变的事情上，会感觉好很多。";
-                return { code: 200, msg: "success", data: { reply: reply, emotion: "empathetic" } };
-            }
+                        const dims = assessment.dimensions || {};
+                        if (dims && Object.keys(dims).length > 0) {
+                            const av = dims.avoidance?.score;
+                            if (av !== undefined) {
+                                lines.push("- 回避倾向维度：" + av + "/5（" + (av >= 4 ? "偏高——学生倾向于回避压力情境" : av >= 3 ? "中等" : "偏低——学生能主动面对") + "）");
+                            }
+                            const ef = dims.self_efficacy?.score;
+                            if (ef !== undefined) {
+                                lines.push("- 自我效能维度：" + ef + "/5（" + (ef <= 2 ? "偏低——学生对自己信心不足，需要多鼓励" : ef <= 3 ? "中等" : "偏高——学生有较好的自我信心") + "）");
+                            }
+                            const cp = dims.coping?.score;
+                            if (cp !== undefined) {
+                                lines.push("- 应对方式维度：" + cp + "/5（" + (cp <= 2 ? "偏低——可能需要发展更健康的应对策略" : cp <= 3 ? "中等" : "偏高——学生有积极的应对方式") + "）");
+                            }
+                        }
 
-            if (emotionTag === '紧张') {
-                const reply = "紧张说明你重视这次经历。试试深呼吸：吸气4秒，屏住4秒，呼气6秒。重复3次，身体会慢慢放松下来。\n\n" +
-                    "紧张时身体会进入「战斗或逃跑」模式。你可以试试渐进式肌肉放松——从脚趾开始，依次收紧再放松每个肌肉群。\n\n" +
-                    "紧张感会随着行动逐渐消退。与其等待不紧张了再行动，不如带着紧张感先迈出第一步。很多时候，开始了就不那么紧张了。";
-                return { code: 200, msg: "success", data: { reply: reply, emotion: "supportive" } };
-            }
+                        const scene = assessment.scene || assessment.scenario;
+                        if (scene) lines.push("- 评估场景：" + scene);
 
-            if (emotionTag === '烦躁') {
-                const reply = "烦躁往往是因为事情没有按预期发展。给自己5分钟的时间「什么都不做」，只是发呆——这不是浪费时间，是在给自己充电。\n\n" +
-                    "情绪就像天气，有阴有晴。此刻的不适会过去的，你之前也经历过，每一次你都走过来了。\n\n" +
-                    "烦躁的时候，试试把注意力转移到身体上——站起来走走，喝杯水，或者做几个伸展动作。身体动了，情绪也会跟着变化。";
-                return { code: 200, msg: "success", data: { reply: reply, emotion: "calming" } };
-            }
+                        if (lines.length > 0) assessmentContext = lines.join("\n");
+                    }
 
-            if (emotionTag === '放松') {
-                const reply = "保持放松的状态很好！你最近做了什么让自己感觉这么好？记住这个感觉，以后压力大时可以回想。\n\n" +
-                    "放松的时候最适合反思和规划。趁现在状态好，想想接下来有什么想做的事？\n\n" +
-                    "你的状态保持得不错！享受当下的轻松，同时也为未来储备一些应对压力的方法吧。比如培养一个爱好，或者建立规律的作息。";
-                return { code: 200, msg: "success", data: { reply: reply, emotion: "positive" } };
-            }
+                    if (emotionTag) {
+                        emotionContext = "学生当前选择了情绪标签：「" + emotionTag + "」，请在回复中回应这个情绪。";
+                    }
 
-            // 根据关键词匹配
-            if (lowerMsg.includes('紧张') || lowerMsg.includes('焦虑') || lowerMsg.includes('害怕')) {
-                const reply = "紧张和焦虑是很自然的情绪反应。试试这个：深呼吸4秒，屏住4秒，呼气6秒，重复几次。你觉得这个方法对你有帮助吗？\n\n" +
-                    "你描述的感受很多人都经历过。重要的是，你愿意面对它而不是逃避，这本身就很勇敢。\n\n" +
-                    "焦虑的时候，我们的脑子容易「catastrophize」（灾难化思维）。试试问自己：最坏的结果是什么？发生的可能性有多大？我能做什么来应对？";
-                return { code: 200, msg: "success", data: { reply: reply, emotion: "empathetic" } };
-            }
+                    // 构建 System Prompt
+                    const systemPrompt = SYSTEM_PROMPT_TEMPLATE
+                        .replace('{assessment_context}', assessmentContext)
+                        .replace('{emotion_context}', emotionContext);
 
-            if (lowerMsg.includes('压力') || lowerMsg.includes('压')) {
-                if (stressScore >= 70) {
-                    const reply = "我能感受到你承受着不小的压力。先别急着解决所有问题——你现在最需要的是什么？休息？倾诉？还是具体的建议？\n\n" +
-                        "压力大的时候，我们容易把所有事情都堆在一起想。试试把让你有压力的事情一件件写下来，然后只关注今天能处理的那一件。\n\n" +
-                        "你已经在努力面对压力了，这很了不起。记住，不需要一次性解决所有问题，一步一步来就好。";
-                    return { code: 200, msg: "success", data: { reply: reply, emotion: "supportive" } };
-                } else {
-                    const reply = "适度的压力其实是动力。关键是要学会管理它，不让它失控。你平时有什么减压的方法吗？\n\n" +
-                        "压力管理有几个有效方法：1) 分解任务 2) 设定合理目标 3) 适当休息 4) 寻求支持。你想详细了解哪个方法？\n\n" +
-                        "你目前的状态还不错，但提前学习压力管理技巧很有帮助。你觉得哪方面最需要加强？";
-                    return { code: 200, msg: "success", data: { reply: reply, emotion: "informative" } };
+                    // 构建消息列表
+                    const messages = [{"role": "system", "content": systemPrompt}];
+
+                    // 添加历史对话
+                    if (history && history.length > 0) {
+                        const recent = history.slice(-20);
+                        recent.forEach(function(msg) {
+                            if (msg.role && msg.content) {
+                                messages.push({"role": msg.role, "content": msg.content});
+                            }
+                        });
+                    }
+
+                    // 添加当前用户消息
+                    let currentContent = message;
+                    if (emotionTag) {
+                        currentContent = "[当前情绪：" + emotionTag + "]\n" + message;
+                    }
+                    messages.push({"role": "user", "content": currentContent});
+
+                    // 调用 DeepSeek API
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', DEEPSEEK_ENDPOINT, true);
+                    xhr.setRequestHeader('Content-Type', 'application/json');
+                    xhr.setRequestHeader('Authorization', 'Bearer ' + DEEPSEEK_API_KEY);
+                    xhr.setRequestHeader('Accept', 'application/json');
+                    xhr.timeout = API_TIMEOUT;
+
+                    xhr.onload = function() {
+                        if (xhr.status === 200) {
+                            try {
+                                const data = JSON.parse(xhr.responseText);
+                                const choices = data.choices || [];
+                                if (choices.length > 0 && choices[0].message && choices[0].message.content) {
+                                    const reply = choices[0].message.content.trim();
+                                    resolve({
+                                        code: 200,
+                                        msg: "success",
+                                        data: { reply: reply, emotion: "supportive" }
+                                    });
+                                    return;
+                                }
+                            } catch (e) {
+                                console.warn('DeepSeek API 返回解析失败:', e);
+                            }
+                        } else {
+                            console.warn('DeepSeek API HTTP错误:', xhr.status, xhr.responseText);
+                        }
+                        // API调用失败，回退到本地规则引擎
+                        resolve(getRuleBasedChat(message, context));
+                    };
+
+                    xhr.onerror = function() {
+                        console.warn('DeepSeek API 网络错误，回退到本地规则引擎');
+                        resolve(getRuleBasedChat(message, context));
+                    };
+
+                    xhr.ontimeout = function() {
+                        console.warn('DeepSeek API 超时，回退到本地规则引擎');
+                        resolve(getRuleBasedChat(message, context));
+                    };
+
+                    const payload = JSON.stringify({
+                        model: DEEPSEEK_MODEL,
+                        messages: messages,
+                        temperature: TEMPERATURE,
+                        max_tokens: MAX_TOKENS,
+                        stream: false
+                    });
+
+                    xhr.send(payload);
+                } catch (e) {
+                    console.warn('DeepSeek API 调用异常，回退到本地规则引擎:', e);
+                    resolve(getRuleBasedChat(message, context));
                 }
-            }
-
-            if (lowerMsg.includes('谢谢') || lowerMsg.includes('感谢')) {
-                const reply = "不客气！记住，我在这里随时支持你。\n\n" +
-                    "如果还有其他想聊的，随时告诉我。照顾好自己！";
-                return { code: 200, msg: "success", data: { reply: reply, emotion: "warm" } };
-            }
-
-            if (lowerMsg.includes('睡不着') || lowerMsg.includes('失眠') || lowerMsg.includes('睡不好')) {
-                const reply = "睡眠问题在压力大的时候很常见。试试睡前1小时远离屏幕，做一些放松的活动，比如听轻音乐或看纸质书。\n\n" +
-                    "失眠的时候越着急越睡不着。试试「4-7-8呼吸法」：吸气4秒，屏住7秒，呼气8秒。重复4次。\n\n" +
-                    "如果躺在床上20分钟还睡不着，不如起来做点轻松的事，等有困意了再回去睡。";
-                return { code: 200, msg: "success", data: { reply: reply, emotion: "caring" } };
-            }
-
-            if (lowerMsg.includes('孤独') || lowerMsg.includes('没人') || lowerMsg.includes('一个人')) {
-                const reply = "感到孤独的时候，记住你并不孤单。很多人都有类似的感受，只是大家不常说出来。你愿意和我多说一些吗？\n\n" +
-                    "孤独感有时候是在提醒我们需要更多的连接。不妨主动联系一个朋友，哪怕只是发条消息问个好。\n\n" +
-                    "即使身边有人，也可能感到孤独。重要的是找到能理解你的人。你身边有可以信任的朋友或家人吗？";
-                return { code: 200, msg: "success", data: { reply: reply, emotion: "warm" } };
-            }
-
-            // 默认回复 - 多段完整内容
-            const replies = [
-                "我理解你的感受。能和我多说一些吗？我想更好地了解你的情况。\n\n" +
-                "感谢你的分享。你描述的这些感受都是正常的，重要的是找到适合自己的应对方式。\n\n" +
-                "每个人应对困难的方式不同。你之前尝试过哪些方法来改善现在的状态？",
-
-                "听起来你经历了不少。你觉得是什么因素让你感到最困扰？\n\n" +
-                "你的感受很重要。记住，寻求帮助是勇敢的表现。我们可以一起想想办法。\n\n" +
-                "有时候把问题说出来，本身就是一种释放。我在这里认真听你说。",
-
-                "感谢你的信任，愿意和我分享这些。\n\n" +
-                "面对困难时，我们容易忽视自己已经做到的事情。回想一下，你最近有什么让自己骄傲的小成就吗？\n\n" +
-                "一步一步来，不用着急。我会一直在这里支持你。"
-            ];
-
-            return {
-                code: 200,
-                msg: "success",
-                data: {
-                    reply: randomChoice(replies),
-                    emotion: "neutral"
-                }
-            };
+            });
         },
 
-        // 获取AI问候语 - 结合评估数据
+        // 获取AI问候语 - 直接调用DeepSeek API，失败时回退到本地规则引擎
         getGreeting: function(assessmentData) {
-            const score = assessmentData ? (assessmentData.comprehensive_risk?.index || assessmentData.score || 50) : 50;
+            return new Promise(function(resolve) {
+                try {
+                    // 格式化评估上下文
+                    let assessmentContext = "暂无评估数据，请基于学生的文字内容进行一般性回应。";
 
-            if (score >= 80) {
-                return {
-                    code: 200,
-                    msg: "success",
-                    data: {
-                        greeting: "你好，我是你的 AI 压力疏导助手。\n\n根据评估，我能感受到你目前承受着较大的压力。这没什么可羞耻的——压力是身体在告诉你「我需要被关心了」。\n\n接下来的时间里，你可以随意和我聊聊任何让你感到困扰的事。我会认真倾听，陪你一起梳理。\n\n现在有什么想聊的吗？"
+                    if (assessmentData) {
+                        const lines = [];
+                        let score = assessmentData.score || assessmentData.comprehensive_risk?.index;
+                        if (score !== undefined && score !== null) {
+                            try {
+                                score = parseInt(score);
+                                let tier = score >= 80 ? "高风险 —— 学生正承受很大压力，需要温和共情" :
+                                           score >= 50 ? "中等风险 —— 学生有一定压力，需要正常化和支持" :
+                                           "低风险 —— 学生状态较好，可以给予肯定和鼓励";
+                                lines.push("- 综合压力指数：" + score + "/100（" + tier + "）");
+                            } catch (e) {}
+                        }
+
+                        const dims = assessmentData.dimensions || {};
+                        if (dims && Object.keys(dims).length > 0) {
+                            const av = dims.avoidance?.score;
+                            if (av !== undefined) {
+                                lines.push("- 回避倾向维度：" + av + "/5（" + (av >= 4 ? "偏高" : av >= 3 ? "中等" : "偏低") + "）");
+                            }
+                            const ef = dims.self_efficacy?.score;
+                            if (ef !== undefined) {
+                                lines.push("- 自我效能维度：" + ef + "/5（" + (ef <= 2 ? "偏低" : ef <= 3 ? "中等" : "偏高") + "）");
+                            }
+                            const cp = dims.coping?.score;
+                            if (cp !== undefined) {
+                                lines.push("- 应对方式维度：" + cp + "/5（" + (cp <= 2 ? "需要改善" : cp <= 3 ? "中等" : "积极") + "）");
+                            }
+                        }
+
+                        if (lines.length > 0) assessmentContext = lines.join("\n");
                     }
-                };
-            } else if (score >= 60) {
-                return {
-                    code: 200,
-                    msg: "success",
-                    data: {
-                        greeting: "你好，我是你的 AI 压力疏导助手。\n\n评估显示你目前有一些压力，这在学生时代是相当正常的体验。适度的压力甚至能帮助我们更专注，但如果让你感到不适，我们可以一起调整。\n\n你可以和我聊聊最近在烦恼什么，或者只是随便说说今天的感受。我在这里陪你。\n\n现在有什么想聊的吗？"
-                    }
-                };
-            } else {
-                return {
-                    code: 200,
-                    msg: "success",
-                    data: {
-                        greeting: "你好，我是你的 AI 压力疏导助手。\n\n你的状态保持得不错！即使状态良好，偶尔也会遇到烦心的事。不管是分享快乐还是倾诉烦恼，我都在这里。\n\n今天过得怎么样？有什么想聊的吗？"
-                    }
-                };
-            }
+
+                    // 构建 System Prompt
+                    const systemPrompt = GREETING_SYSTEM_PROMPT
+                        .replace('{assessment_context}', assessmentContext);
+
+                    const messages = [
+                        {"role": "system", "content": systemPrompt},
+                        {"role": "user", "content": "请给我一个开场问候吧。"}
+                    ];
+
+                    // 调用 DeepSeek API
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', DEEPSEEK_ENDPOINT, true);
+                    xhr.setRequestHeader('Content-Type', 'application/json');
+                    xhr.setRequestHeader('Authorization', 'Bearer ' + DEEPSEEK_API_KEY);
+                    xhr.setRequestHeader('Accept', 'application/json');
+                    xhr.timeout = API_TIMEOUT;
+
+                    xhr.onload = function() {
+                        if (xhr.status === 200) {
+                            try {
+                                const data = JSON.parse(xhr.responseText);
+                                const choices = data.choices || [];
+                                if (choices.length > 0 && choices[0].message && choices[0].message.content) {
+                                    const greeting = choices[0].message.content.trim();
+                                    resolve({
+                                        code: 200,
+                                        msg: "success",
+                                        data: { greeting: greeting }
+                                    });
+                                    return;
+                                }
+                            } catch (e) {
+                                console.warn('DeepSeek 问候语API返回解析失败:', e);
+                            }
+                        } else {
+                            console.warn('DeepSeek 问候语API HTTP错误:', xhr.status);
+                        }
+                        // API调用失败，回退到本地规则引擎
+                        resolve(getRuleBasedGreeting(assessmentData));
+                    };
+
+                    xhr.onerror = function() {
+                        console.warn('DeepSeek 问候语API网络错误，回退到本地规则引擎');
+                        resolve(getRuleBasedGreeting(assessmentData));
+                    };
+
+                    xhr.ontimeout = function() {
+                        console.warn('DeepSeek 问候语API超时，回退到本地规则引擎');
+                        resolve(getRuleBasedGreeting(assessmentData));
+                    };
+
+                    const payload = JSON.stringify({
+                        model: DEEPSEEK_MODEL,
+                        messages: messages,
+                        temperature: TEMPERATURE,
+                        max_tokens: 400,
+                        stream: false
+                    });
+
+                    xhr.send(payload);
+                } catch (e) {
+                    console.warn('DeepSeek 问候语API调用异常，回退到本地规则引擎:', e);
+                    resolve(getRuleBasedGreeting(assessmentData));
+                }
+            });
         }
     };
+
+    // ============================================================
+    // 本地规则引擎 - 作为DeepSeek API的兜底方案
+    // ============================================================
+
+    function getRuleBasedChat(message, context) {
+        const assessment = context && context.assessment;
+        const emotionTag = context && context.emotion_tag;
+        const history = context && context.history || [];
+
+        // 解析评估数据
+        let stressLevel = 50;
+        let avoidance = 50;
+        let selfEfficacy = 50;
+        let coping = 50;
+        let scene = "";
+
+        if (assessment) {
+            stressLevel = assessment.score || assessment.comprehensive_risk?.index || 50;
+            const dims = assessment.dimensions || {};
+            if (dims && Object.keys(dims).length > 0) {
+                avoidance = (dims.avoidance?.score || 3) * 20;
+                selfEfficacy = (dims.self_efficacy?.score || 3) * 20;
+                coping = (dims.coping?.score || 3) * 20;
+            } else {
+                avoidance = assessment.avoidance || 50;
+                selfEfficacy = assessment.self_efficacy || 50;
+                coping = assessment.coping || 50;
+            }
+            scene = assessment.scene || assessment.scenario || "";
+        }
+
+        stressLevel = parseInt(stressLevel) || 50;
+
+        // 确定压力等级
+        let stressTier;
+        if (stressLevel >= 80) stressTier = "high";
+        else if (stressLevel >= 50) stressTier = "medium";
+        else stressTier = "low";
+
+        // 主题关键词
+        const TOPIC_KEYWORDS = {
+            "考试": ["考试", "复习", "做题", "成绩", "挂科", "及格", "分数", "卷子", "备考", "题目", "错题"],
+            "社交": ["同学", "老师", "朋友", "室友", "发言", "课堂", "点名", "讨论", "小组", "嘲笑", "目光", "评价"],
+            "家庭": ["父母", "家人", "家里", "期望", "压力", "比较", "亲戚", "妈妈", "爸爸", "回家"],
+            "未来": ["未来", "毕业", "工作", "考研", "就业", "前途", "迷茫", "方向", "专业", "选择"],
+            "睡眠": ["失眠", "睡不着", "熬夜", "睡眠", "困", "累", "疲惫", "精神", "犯困", "休息"],
+            "身体": ["头疼", "胃痛", "心慌", "胸闷", "发抖", "出汗", "心跳", "恶心", "身体", "不舒服"],
+            "情绪": ["焦虑", "紧张", "烦躁", "难过", "害怕", "担心", "不开心", "压抑", "崩溃", "想哭", "低落"],
+            "自我": ["不行", "做不到", "笨", "差劲", "失败", "没用", "比不上", "不如", "自卑", "否定"]
+        };
+
+        const TOPIC_RESPONSES = {
+            "考试": {
+                "high": [
+                    "考试带来的压力确实让人喘不过气。其实很多学霸也会有同样的感受——你在乎成绩，正说明你是个认真的人。",
+                    "面对考试的压力，现在的你不需要想着「一定要考好」，而是先照顾好自己的状态。我们一步一步来。"
+                ],
+                "medium": [
+                    "考试前的紧张是很普遍的感受。适度的压力其实能帮助我们更专注——试着把它当作你的「备考助手」而不是敌人。",
+                    "复习过程中感到焦虑，说明你在认真对待这件事。不妨把大目标拆成小任务，完成一个就奖励自己一下。"
+                ],
+                "low": [
+                    "你对考试的心态听起来挺稳的！保持这种节奏，适当的放松也是备考的一部分。",
+                    "能从容面对考试真的很棒。如果偶尔感到紧张，记得那是身体在帮你调动注意力～"
+                ]
+            },
+            "社交": {
+                "high": [
+                    "在人群中感到紧张，是很多人都会经历的感受。你不是「社交能力差」，只是你的敏感让你更在意别人——这其实也是一种温柔。",
+                    "被别人注视时的不安，往往源于我们对自己要求太高。试着把注意力从「别人怎么看我」转移到「我想表达什么」，会轻松很多。"
+                ],
+                "medium": [
+                    "在社交场合感到有些不自在很正常。可以先从和熟悉的朋友交流开始，慢慢建立信心。",
+                    "每次鼓起勇气开口，都是一次成长。你已经比上一次更勇敢了——即使进步看起来很小，也值得肯定。"
+                ],
+                "low": [
+                    "你能在社交中保持自然的状态，这本身就是一种能力！继续保持这种从容。",
+                    "良好的社交关系是缓解压力的重要资源，你已经拥有了很好的基础。"
+                ]
+            },
+            "家庭": {
+                "high": [
+                    "家人的期望有时会变成无形的压力。但请记住：你的价值不取决于你是否达到了别人的标准。",
+                    "和家人沟通压力可能不容易。你可以试着用「我感受…」而不是「你们…」来表达，让对话少一些对抗。"
+                ],
+                "medium": [
+                    "家庭关系中的压力很常见，尤其是在学业关键的阶段。适当分享你的感受，也许会发现家人比想象中更理解你。",
+                    "父母的关心有时会以压力的形式出现。试着让他们了解你的努力，而不只是结果。"
+                ],
+                "low": [
+                    "你有来自家庭的支持，这是很宝贵的资源。珍惜这份理解与温暖。"
+                ]
+            },
+            "未来": {
+                "high": [
+                    "对未来感到迷茫是很正常的。在这个阶段，不必急着找到「正确答案」——很多人的路都是边走边看出来的。",
+                    "关于未来的焦虑，往往是因为你对自己有期待。先专注于眼前能做好的事，方向会慢慢清晰起来。"
+                ],
+                "medium": [
+                    "未来的不确定性确实让人不安。但每一个认真思考未来的你，都在为更好的自己铺路。",
+                    "迷茫的时候，不妨先做一个小目标：今天完成什么？这周学到什么？积累起来就是方向。"
+                ],
+                "low": [
+                    "你对未来有清晰的规划和信心，这很了不起！继续保持这份笃定。"
+                ]
+            },
+            "睡眠": {
+                "high": [
+                    "失眠确实非常折磨人。如果暂时睡不着，不必强迫自己——起来喝杯温水，做些缓慢的深呼吸，让身体先放松下来。",
+                    "睡眠问题往往和压力形成恶性循环。今晚可以试试：睡前1小时不刷手机，用温水泡脚，听一些舒缓的白噪音。"
+                ],
+                "medium": [
+                    "偶尔的睡眠不好不会对身体造成太大影响，反而是对「睡不着」的焦虑更容易让人疲惫。放轻松，身体会自己调节。",
+                    "建立一个固定的睡前仪式会很有帮助——比如读几页轻松的书、做一些轻柔的拉伸。"
+                ],
+                "low": [
+                    "睡眠质量好是心理健康的重要基础，继续保持良好的作息习惯哦。"
+                ]
+            },
+            "身体": {
+                "high": [
+                    "身体的不适是压力在提醒你需要休息了。请重视这些信号——健康永远是第一位的。",
+                    "当压力以身体症状出现时，说明你的身心已经很累了。试着给自己放个假，哪怕只是半天。如果持续不适，也请考虑去看医生。"
+                ],
+                "medium": [
+                    "压力有时会通过身体来表达——头疼、胃不舒服等都是常见的表现。适当的运动和放松训练会有所帮助。",
+                    "注意到身体发出的信号是很重要的。你可以试试渐进式肌肉放松法：从脚趾开始，逐步收紧再放松身体各部位的肌肉。"
+                ],
+                "low": [
+                    "身体健康和心理健康密切相关，保持良好的生活习惯会让两者都受益。"
+                ]
+            },
+            "情绪": {
+                "high": [
+                    "这些情绪不是你的错，也不是你「太脆弱」。它们只是在告诉你：你需要被照顾了。我在这里陪着你。",
+                    "当负面情绪像潮水一样涌来时，不需要抵抗它。试着观察它、命名它、然后看着它慢慢退去。你比情绪更强大。"
+                ],
+                "medium": [
+                    "有这些情绪是人类正常的反应。给自己一些空间去感受，然后慢慢地，把注意力拉回到当下。",
+                    "情绪就像天气，有阴有晴。此刻的不适会过去的，你之前也经历过，每一次你都走过来了。"
+                ],
+                "low": [
+                    "你能够觉察并表达自己的情绪，这是很好的自我关怀能力。继续保持！"
+                ]
+            },
+            "自我": {
+                "high": [
+                    "当你这样否定自己时，我想告诉你：你看到的自己和别人眼中的你，往往是不一样的。你的努力、你的坚持，都真实存在。",
+                    "自我否定是一个非常消耗能量的习惯。试着像对待好朋友一样对待自己——你会对朋友说这些话吗？相信你不会。那也不要用这些话对待自己。"
+                ],
+                "medium": [
+                    "偶尔对自己产生怀疑很正常。但不要忘了回顾你已经走过的路、克服过的困难——你比自己想象中更有力量。",
+                    "每个人都有不擅长的事，但这不等于「我不行」。试着把「我做不到」换成「我还在学习」，给自己一些成长的时间。"
+                ],
+                "low": [
+                    "你有健康的自我认知，这是抵御压力的重要保护因素。继续保持对自己的善意。"
+                ]
+            }
+        };
+
+        // 情绪标签话术
+        const EMOTION_RESPONSES = {
+            "焦虑": [
+                "焦虑是大脑在试图保护你——它在提醒你「这件事很重要」。感谢它的提醒，然后告诉自己：我已经在努力了。",
+                "当焦虑来袭时，试试「5-4-3-2-1」法：说出5个你看到的东西、4个你摸到的东西、3个听到的声音、2个闻到的气味、1个你能尝到的味道。这会帮你回到当下。"
+            ],
+            "紧张": [
+                "紧张的时候，身体进入了「备战」状态。试试腹式呼吸：吸气4秒、屏住4秒、呼气6秒。重复几次，身体会慢慢放松下来。",
+                "紧张说明你在乎。带着这份在乎去行动，即使结果不完美，过程本身就是成长。"
+            ],
+            "烦躁": [
+                "烦躁的时候，试试离开当前环境几分钟——去窗边看看远处、去倒杯水、或者听一首喜欢的歌。换个空间，心情也会跟着换。",
+                "有时候烦躁是因为我们对自己要求太高了。给自己5分钟的时间「什么都不做」，就只是发呆——这不是浪费时间，是在给自己充电。"
+            ],
+            "放松": [
+                "能感到放松真是太好了！享受这一刻的平静，记住这种感觉——当你之后感到压力时，可以回想现在的状态。",
+                "放松的时候最适合做一些让自己开心的事：听音乐、散步、和朋友聊天。这些「充电」时刻对抗压非常重要。"
+            ]
+        };
+
+        // 维度建议
+        const DIMENSION_ADVICE = {
+            "avoidance_high": [
+                "你倾向于在压力面前回避，这是一种本能的自我保护。不过长期回避可能会让问题积累。试着迈出一小步——不需要一下子解决所有问题，今天只做一件小事就好。"
+            ],
+            "avoidance_low": [
+                "你面对压力时能主动应对，这是很棒的应对策略！继续保持这种积极的姿态。"
+            ],
+            "self_efficacy_low": [
+                "你可能低估了自己的能力。回顾一下你过去的经历——你一定克服过不少困难。那些成功经验就是你能力的证明。"
+            ],
+            "self_efficacy_high": [
+                "你对自己有足够的信心，这是应对压力的重要资源。相信自己的判断和能力。"
+            ],
+            "coping_positive": [
+                "你已经有了一些有效的应对方式。继续保持这些好习惯，它们是你在压力中的「救生圈」。"
+            ],
+            "coping_negative": [
+                "试着发展一些更健康的应对方式：运动、写日记、和朋友聊天、听音乐——找到适合自己的「压力出口」。"
+            ]
+        };
+
+        // 通用话术
+        const GENERAL_RESPONSES = {
+            "high": [
+                "我能感受到你现在承受着很大的压力。请记住，你不需要独自承担这一切。我在这里，随时愿意倾听。",
+                "压力很大的时候，照顾好自己是最重要的事。今天你可以为自己做一件小事——哪怕只是好好吃一顿饭、出去走十分钟。",
+                "你已经在很努力地应对了，这本身就值得肯定。现在，让我们一起慢慢地、一步一步地找到让你更舒服的方式。"
+            ],
+            "medium": [
+                "你现在感受到的压力，是很多人都会经历的阶段。你并不孤单，这些感受都是可以被理解和处理的。",
+                "适度的压力可以成为动力，但如果感到不适，随时可以调整节奏。你今天过得怎么样？",
+                "愿意来聊一聊，本身就说明你在积极地面对自己的状态——这已经是很好的第一步了。"
+            ],
+            "low": [
+                "你现在的状态听起来不错！继续保持这种轻松的心态。如果有任何想聊的，我随时都在。",
+                "在状态好的时候，可以建立一些「心理资源」——比如记录下让你开心的事、培养一个放松的爱好。这些会在你需要的时候帮到你。",
+                "很高兴看到你保持着良好的状态！照顾好自己，享受当下的平静。"
+            ]
+        };
+
+        // 呼吸练习
+        const BREATHING_EXERCISES = [
+            " **一分钟呼吸练习**\n闭上眼睛，用鼻子慢慢吸气（默数4秒），屏住呼吸（默数4秒），然后用嘴巴缓缓呼气（默数6秒）。重复3次。",
+            " **身体扫描练习**\n从头到脚，依次关注身体的每个部位。感受哪里紧张、哪里放松。不需要改变什么，只是觉察。",
+            "🎯 **感官锚定练习**\n暂停一下，注意你周围的：5样看到的、4样摸到的、3样听到的、2样闻到的、1样尝到的。",
+            "💭 **思绪观察练习**\n想象你的思绪是天空中的云朵。看着它们飘来，再看着它们飘走。你不需要抓住任何一朵。"
+        ];
+
+        // 构建回复
+        const parts = [];
+
+        // 1) 情绪标签即时回应
+        if (emotionTag && EMOTION_RESPONSES[emotionTag]) {
+            parts.push(randomChoice(EMOTION_RESPONSES[emotionTag]));
+        }
+
+        // 2) 识别用户消息主题并回应
+        let matchedTopic = null;
+        for (const topic in TOPIC_KEYWORDS) {
+            const keywords = TOPIC_KEYWORDS[topic];
+            for (const kw of keywords) {
+                if (message.includes(kw)) {
+                    matchedTopic = topic;
+                    break;
+                }
+            }
+            if (matchedTopic) break;
+        }
+
+        if (matchedTopic && TOPIC_RESPONSES[matchedTopic]) {
+            const topicResp = randomChoice(TOPIC_RESPONSES[matchedTopic][stressTier]);
+            if (!parts.includes(topicResp)) {
+                parts.push(topicResp);
+            }
+        } else {
+            const general = randomChoice(GENERAL_RESPONSES[stressTier]);
+            parts.push(general);
+        }
+
+        // 3) 维度个性化建议（最多选2条）
+        const dimensionMsgs = [];
+
+        if (avoidance >= 70) {
+            dimensionMsgs.push(randomChoice(DIMENSION_ADVICE["avoidance_high"]));
+        } else if (avoidance <= 30) {
+            dimensionMsgs.push(randomChoice(DIMENSION_ADVICE["avoidance_low"]));
+        }
+
+        if (selfEfficacy <= 30) {
+            dimensionMsgs.push(randomChoice(DIMENSION_ADVICE["self_efficacy_low"]));
+        } else if (selfEfficacy >= 70) {
+            dimensionMsgs.push(randomChoice(DIMENSION_ADVICE["self_efficacy_high"]));
+        }
+
+        if (coping >= 60) {
+            dimensionMsgs.push(randomChoice(DIMENSION_ADVICE["coping_positive"]));
+        } else if (coping <= 30) {
+            dimensionMsgs.push(randomChoice(DIMENSION_ADVICE["coping_negative"]));
+        }
+
+        if (dimensionMsgs.length > 0) {
+            dimensionMsgs.sort(() => Math.random() - 0.5);
+            parts.push(...dimensionMsgs.slice(0, 2));
+        }
+
+        // 4) 高压时追加呼吸练习引导（35%概率）
+        if (stressLevel >= 70 && Math.random() < 0.35) {
+            parts.push(randomChoice(BREATHING_EXERCISES));
+        }
+
+        // 5) 收尾
+        let closings;
+        if (stressTier === "high") {
+            closings = [
+                "不用着急，慢慢来，我在这里陪着你。",
+                "你说的我都听到了。还想继续聊聊吗？",
+                "如果你现在不想说话，也没关系的。深呼吸一下，我就在这儿。"
+            ];
+        } else {
+            closings = [
+                "你愿意多说一点吗？",
+                "还有什么想聊的吗？",
+                "我在这里，你可以继续说说你的感受。",
+                "不用着急，想到什么都可以说。"
+            ];
+        }
+        parts.push(randomChoice(closings));
+
+        return {
+            code: 200,
+            msg: "success",
+            data: {
+                reply: parts.join("\n\n"),
+                emotion: "supportive"
+            }
+        };
+    }
+
+    function getRuleBasedGreeting(assessmentData) {
+        let stressLevel = 50;
+        if (assessmentData) {
+            stressLevel = assessmentData.score || assessmentData.comprehensive_risk?.index || 50;
+            try {
+                stressLevel = parseInt(stressLevel);
+            } catch (e) {
+                stressLevel = 50;
+            }
+        }
+
+        let greeting;
+        if (stressLevel >= 80) {
+            greeting = "你好，我是你的 AI 压力疏导助手 🌙\n\n" +
+                "根据刚才的评估，我能感受到你目前承受着较大的压力。这没什么可羞耻的——压力是身体在告诉你「我需要被关心了」。\n\n" +
+                "接下来的时间里，你可以随意和我聊聊任何让你感到困扰的事：学业、人际关系、未来的担忧……或者任何想说的话。我会认真倾听，陪你一起梳理。\n\n" +
+                "今天你想从哪方面开始聊呢？";
+        } else if (stressLevel >= 50) {
+            greeting = "你好，我是你的 AI 压力疏导助手 \n\n" +
+                "评估结果显示你目前有一些压力，这在学生时代是相当正常的体验。适度的压力甚至能帮助我们更专注，但如果让你感到不适，我们可以一起调整。\n\n" +
+                "你可以和我聊聊最近在烦恼什么，或者只是随便说说今天的感受。我在这里陪你。\n\n" +
+                "现在有什么想聊的吗？";
+        } else {
+            greeting = "你好，我是你的 AI 压力疏导助手 ☀️\n\n" +
+                "评估显示你目前的状态保持得不错！这很棒——说明你已经有了一些有效的压力应对方式。\n\n" +
+                "即使状态良好，偶尔也会遇到让自己烦心的事。不管是分享快乐还是倾诉烦恼，我都在这里。也欢迎你分享保持好状态的秘诀，或许能帮助到其他人～\n\n" +
+                "今天想聊些什么呢？";
+        }
+
+        return {
+            code: 200,
+            msg: "success",
+            data: {
+                greeting: greeting
+            }
+        };
+    }
 
     console.log('Local Engine initialized successfully');
 })();
