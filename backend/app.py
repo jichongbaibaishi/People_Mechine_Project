@@ -247,6 +247,11 @@ def parse_args() -> argparse.Namespace:
         default=str(Path(__file__).resolve().parent / "data" / "chat.sqlite3"),
         help="Chat SQLite database path",
     )
+    parser.add_argument(
+        "--deepseek-api-key",
+        default=None,
+        help="DeepSeek API Key（也可通过环境变量 DEEPSEEK_API_KEY 设置）",
+    )
     return parser.parse_args()
 
 
@@ -265,6 +270,14 @@ def main() -> None:
     # 初始化 AI 对话模块数据库
     init_ai_chat_database(args.chat_db)
 
+    # 配置 DeepSeek API Key
+    if args.deepseek_api_key:
+        os.environ["DEEPSEEK_API_KEY"] = args.deepseek_api_key
+
+    # 检测 DeepSeek 状态
+    from ai_chat.config import get_api_key
+    deepseek_available = get_api_key() is not None
+
     server = ThreadingHTTPServer(
         (args.host, args.port),
         make_combined_handler(auth_database, scenario_database, result_database, args.chat_db)
@@ -276,6 +289,13 @@ def main() -> None:
     print(f" 后端API地址: http://{args.host}:{args.port}/api")
     print(f" AI对话API:  http://{args.host}:{args.port}/api/chat")
     print(f" 前端目录: {FRONTEND_DIR}")
+    print("-" * 60)
+    if deepseek_available:
+        print(" DeepSeek API: [ON] 已启用 -- AI 对话由 DeepSeek 实时生成")
+    else:
+        print(" DeepSeek API: [OFF] 未配置 -- 使用规则引擎（离线模式）")
+        print(" 配置方式: --deepseek-api-key 参数 或 环境变量 DEEPSEEK_API_KEY")
+        print("          或创建 backend/data/deepseek_config.json")
     print("=" * 60)
     print(" 按 Ctrl+C 停止服务")
     print("=" * 60)

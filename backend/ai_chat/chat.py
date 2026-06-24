@@ -1,9 +1,20 @@
 """
 AI 压力疏导核心逻辑 —— 基于多维评估 + 用户输入 + 情绪标签的规则引擎。
-不依赖外部 AI API，离线可用。
+规则引擎作为兜底方案；优先使用 DeepSeek API 生成更智能的回复。
 """
 
+import logging
 import random
+
+from .config import get_api_key
+from .deepseek import (
+    get_deepseek_support,
+    get_deepseek_greeting,
+    DeepSeekError,
+    DeepSeekNotConfigured,
+)
+
+logger = logging.getLogger("ai_chat.chat")
 
 # ---------------------------------------------------------------------------
 # 1. 关键词 → 主题分类（用于理解用户在说什么）
@@ -233,7 +244,7 @@ GREETINGS = {
 # ---------------------------------------------------------------------------
 # 7. 主函数
 # ---------------------------------------------------------------------------
-def get_ai_support(
+def get_ai_support_rule_based(
     user_message: str,
     assessment: dict | None = None,
     emotion_tag: str | None = None,
@@ -362,7 +373,7 @@ def get_ai_support(
     return "\n\n".join(parts)
 
 
-def get_greeting(assessment: dict | None = None) -> str:
+def get_greeting_rule_based(assessment: dict | None = None) -> str:
     """
     根据评估结果生成开场白
     """
@@ -380,3 +391,56 @@ def get_greeting(assessment: dict | None = None) -> str:
         return GREETINGS["medium"]
     else:
         return GREETINGS["low"]
+
+
+# ---------------------------------------------------------------------------
+# 包装函数：优先使用 DeepSeek API，失败时自动回退到规则引擎
+# ---------------------------------------------------------------------------
+def get_ai_support(
+    user_message: str,
+    assessment: dict | None = None,
+    emotion_tag: str | None = None,
+    history: list | None = None,
+) -> str:
+    """
+    AI 压力疏导：优先使用 DeepSeek API 生成智能回复，
+    任何失败都自动回退到规则引擎。
+    """
+    if get_api_key():
+        try:
+            return get_deepseek_support(
+                user_message=user_message,
+                assessment=assessment,
+                emotion_tag=emotion_tag,
+                history=history,
+            )
+        except DeepSeekNotConfigured:
+            pass  # 静默回退
+        except DeepSeekError as e:
+            logger.warning("DeepSeek API 调用失败，回退到规则引擎: %s", e)
+        except Exception:
+            logger.exception("DeepSeek API 发生未预期错误，回退到规则引擎")
+
+    return get_ai_support_rule_based(
+        user_message=user_message,
+        assessment=assessment,
+        emotion_tag=emotion_tag,
+        history=history,
+    )
+
+
+def get_greeting(assessment: dict | None = None) -> str:
+    """
+    生成开场白：优先使用 DeepSeek API，失败时自动回退到规则引擎。
+    """
+    if get_api_key():
+        try:
+            return get_deepseek_greeting(assessment=assessment)
+        except DeepSeekNotConfigured:
+            pass  # 静默回退
+        except DeepSeekError as e:
+            logger.warning("DeepSeek 开场白生成失败，回退到规则引擎: %s", e)
+        except Exception:
+            logger.exception("DeepSeek 开场白发生未预期错误，回退到规则引擎")
+
+    return get_greeting_rule_based(assessment=assessment)
